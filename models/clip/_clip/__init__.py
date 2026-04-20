@@ -12,17 +12,7 @@ from .model import CLIP
 
 curr_dir = os.path.dirname(os.path.abspath(__file__))
 
-clip_model_names = [
-    "clip_resnet50",
-    "clip_resnet101",
-    "clip_resnet50x4",
-    "clip_resnet50x16",
-    "clip_resnet50x64",
-    "clip_vit_b_32",
-    "clip_vit_b_16",
-    "clip_vit_l_14",
-    "clip_vit_l_14_336px",
-]
+clip_model_names = ["clip_vit_l_14"]
 
 clip_image_encoder_names = [f"clip_image_encoder_{name[5:]}" for name in clip_model_names]
 clip_text_encoder_names = [f"clip_text_encoder_{name[5:]}" for name in clip_model_names]

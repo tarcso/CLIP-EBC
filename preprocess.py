@@ -252,7 +252,7 @@ def _nwpu(
         with open(os.path.join(data_src_dir, f"{split}.txt"), "r") as f:
             indices = f.read().splitlines()
         indices = [idx.split(" ")[0] for idx in indices]
-        image_src_paths = [os.path.join(data_src_dir, f"images_part{min(5, (int(idx) - 1) // 1000 + 1)}", f"{idx}.jpg") for idx in indices]
+        image_src_paths = [os.path.join(data_src_dir, "images", f"{idx}.jpg") for idx in indices]
         label_src_paths = [os.path.join(data_src_dir, "mats", f"{idx}.mat") for idx in indices]
 
         image_dst_dir = os.path.join(data_dst_dir, split, "images")
@@ -288,7 +288,7 @@ def _nwpu(
     with open(os.path.join(data_src_dir, f"{split}.txt"), "r") as f:
         indices = f.read().splitlines()
     indices = [idx.split(" ")[0] for idx in indices]
-    image_src_paths = [os.path.join(data_src_dir, f"images_part{min(5, (int(idx) - 1) // 1000 + 1)}", f"{idx}.jpg") for idx in indices]
+    image_src_paths = [os.path.join(data_src_dir, "images", f"{idx}.jpg") for idx in indices]
 
     image_dst_dir = os.path.join(data_dst_dir, split, "images")
     os.makedirs(image_dst_dir, exist_ok=True)

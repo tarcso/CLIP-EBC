@@ -1,0 +1,5 @@
+MAE: 34.4888
+RMSE: 79.7130
+Num images: 500
+High-count threshold (75th percentile): 349.50
+Low pixels/person threshold (25th percentile): 11755.62

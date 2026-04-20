@@ -47,12 +47,18 @@ def sliding_window_predict(
     assert isinstance(stride, tuple) and len(stride) == 2 and stride[0] > 0 and stride[1] > 0, f"Stride must be a positive integer tuple (h, w), got {stride}"
     assert stride[0] <= window_size[0] and stride[1] <= window_size[1], f"Stride must be smaller than window size, got {stride} and {window_size}"
 
+    # Pad image to at least window_size so every pixel is covered
+    pad_h = max(0, window_size[0] - image.shape[-2])
+    pad_w = max(0, window_size[1] - image.shape[-1])
+    if pad_h > 0 or pad_w > 0:
+        image = F.pad(image, (0, pad_w, 0, pad_h), mode="constant", value=0)
+
     image_height, image_width = image.shape[-2:]
     window_height, window_width = window_size
     stride_height, stride_width = stride
 
-    num_rows = int(np.ceil((image_height - window_height) / stride_height) + 1)
-    num_cols = int(np.ceil((image_width - window_width) / stride_width) + 1)
+    num_rows = max(1, int(np.ceil((image_height - window_height) / stride_height) + 1)) if image_height >= window_height else 1
+    num_cols = max(1, int(np.ceil((image_width - window_width) / stride_width) + 1)) if image_width >= window_width else 1
 
     reduction = model.reduction if hasattr(model, "reduction") else 1  # reduction factor of the model. For example, if reduction = 8, then the density map will be reduced by 8x.
     windows = []
@@ -61,9 +67,11 @@ def sliding_window_predict(
             x_start, y_start = i * stride_height, j * stride_width
             x_end, y_end = x_start + window_height, y_start + window_width
             if x_end > image_height:
-                x_start, x_end = image_height - window_height, image_height
+                x_start = max(0, image_height - window_height)
+                x_end = image_height
             if y_end > image_width:
-                y_start, y_end = image_width - window_width, image_width
+                y_start = max(0, image_width - window_width)
+                y_end = image_width
 
             window = image[:, :, x_start:x_end, y_start:y_end]
             windows.append(window)
@@ -84,12 +92,17 @@ def sliding_window_predict(
             x_start, y_start = i * stride_height, j * stride_width
             x_end, y_end = x_start + window_height, y_start + window_width
             if x_end > image_height:
-                x_start, x_end = image_height - window_height, image_height
+                x_start = max(0, image_height - window_height)
+                x_end = image_height
             if y_end > image_width:
-                y_start, y_end = image_width - window_width, image_width
+                y_start = max(0, image_width - window_width)
+                y_end = image_width
 
-            pred_map[:, (x_start // reduction): (x_end // reduction), (y_start // reduction): (y_end // reduction)] += preds[idx, :, :, :]
-            count_map[:, (x_start // reduction): (x_end // reduction), (y_start // reduction): (y_end // reduction)] += 1.
+            pred_h, pred_w = preds[idx].shape[-2], preds[idx].shape[-1]
+            x_s = x_start // reduction
+            y_s = y_start // reduction
+            pred_map[:, x_s:x_s + pred_h, y_s:y_s + pred_w] += preds[idx, :, :, :]
+            count_map[:, x_s:x_s + pred_h, y_s:y_s + pred_w] += 1
             idx += 1
 
     pred_map /= count_map  # average the overlapping regions
