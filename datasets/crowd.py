@@ -2,13 +2,17 @@ import torch
 from torch import Tensor
 from torch.utils.data import Dataset
 from torchvision.transforms import ToTensor, Normalize
+from torchvision import transforms
 import os
 from glob import glob
 from PIL import Image
 import numpy as np
 from typing import Optional, Callable, Union, Tuple
-
+import json
+from pathlib import Path
 from .utils import get_id, generate_density_map
+import torch.nn.functional as F
+import torchvision.transforms.functional as TF
 
 curr_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -57,7 +61,7 @@ class Crowd(Dataset):
 
         self.__find_root__()
         self.__make_dataset__()
-        self.__check_sanity__()
+        #self.__check_sanity__()
         self.indices = list(range(len(self.image_names)))
 
         self.to_tensor = ToTensor()
@@ -69,17 +73,20 @@ class Crowd(Dataset):
         self.num_crops = num_crops
 
     def __find_root__(self) -> None:
-        # if self.dataset == "sha":
-        #     self.root = os.path.join(curr_dir, "..", "data", "ShanghaiTech_A")
-        # elif self.dataset == "shb":
-        #     self.root = os.path.join(curr_dir, "..", "data", "ShanghaiTech_B")
-        # elif self.dataset == "qnrf":
-        #     self.root = os.path.join(curr_dir, "..", "data", "QNRF")
-        # elif self.dataset == "nwpu":
-        #     self.root = os.path.join(curr_dir, "..", "data", "NWPU")
-        # else:  # self.dataset == "jhu"
-        #     self.root = os.path.join(curr_dir, "..", "data", "JHU")
-        self.root = os.path.join(curr_dir, "..", "data", self.dataset)
+        # 1. Define the specific HPC path
+        hpc_path = "/dtu/blackhole/02/137570/MultiRes/NWPU_crowd"
+        
+        # 2. Local project fallback
+        local_project_root = os.path.abspath(os.path.join(curr_dir, ".."))
+        local_path = os.path.join(local_project_root, "data", self.dataset)
+
+        if self.dataset == "nwpu" and os.path.exists(hpc_path):
+            self.root = hpc_path
+        elif os.path.exists(local_path):
+            self.root = local_path
+        else:
+            # Fallback for other datasets or environments
+            self.root = local_path
 
     def __make_dataset__(self) -> None:
         image_npys = glob(os.path.join(self.root, self.split, "images", "*.npy"))
@@ -90,13 +97,14 @@ class Crowd(Dataset):
             self.image_type = "jpg"
             image_names = glob(os.path.join(self.root, self.split, "images", "*.jpg"))
 
-        label_names = glob(os.path.join(self.root, self.split, "labels", "*.npy"))
+        label_names = glob(os.path.join(self.root, self.split, "jsons", "*.json"))
         image_names = [os.path.basename(image_name) for image_name in image_names]
         label_names = [os.path.basename(label_name) for label_name in label_names]
         image_names.sort(key=get_id)
         label_names.sort(key=get_id)
         image_ids = tuple([get_id(image_name) for image_name in image_names])
         label_ids = tuple([get_id(label_name) for label_name in label_names])
+
         assert image_ids == label_ids, "image_ids and label_ids do not match."
         self.image_names = tuple(image_names)
         self.label_names = tuple(label_names)
@@ -136,7 +144,7 @@ class Crowd(Dataset):
         label_name = self.label_names[idx]
 
         image_path = os.path.join(self.root, self.split, "images", image_name)
-        label_path = os.path.join(self.root, self.split, "labels", label_name)
+        label_path = os.path.join(self.root, self.split, "jsons", label_name)
 
         if self.image_type == "npy":
             with open(image_path, "rb") as f:
@@ -148,9 +156,14 @@ class Crowd(Dataset):
             image = self.to_tensor(image)
 
         with open(label_path, "rb") as f:
-            label = np.load(f)
+            label_data = json.load(f)
 
-        label = torch.from_numpy(label).float()
+        if isinstance(label_data, dict) and 'points' in label_data:
+            points = np.array(label_data['points'])
+        else:
+            points = np.array(label_data)
+
+        label = torch.from_numpy(points).float()
 
         if self.transforms is not None:
             images_labels = [self.transforms(image.clone(), label.clone()) for _ in range(self.num_crops)]
@@ -187,7 +200,7 @@ class NWPUTest(Dataset):
         """
         self.root = os.path.join(curr_dir, "..", "data", "nwpu")
 
-        image_npys = glob(os.path.join(self.root, "test", "images", "*.npy"))
+        image_npys = glob(os.path.join(self.root, "test", "images", "*.json"))
         if len(image_npys) > 0:
             self.image_type = "npy"
             image_names = image_npys
@@ -231,3 +244,157 @@ class NWPUTest(Dataset):
             return image, image_name
         else:
             return image
+        
+class Crowd_distilation(Dataset):
+    def __init__(
+        self,
+        dataset: str,
+        split: str,
+        transforms: Optional[Callable] = None,
+        sigma: Optional[float] = None,
+        return_filename: bool = False,
+        num_crops: int = 1,
+        downscale: int = 2
+    ) -> None:
+        """
+        Dataset for crowd counting.
+        """
+        assert dataset.lower() in available_datasets, f"Dataset {dataset} is not available."
+        assert split in ["train", "val"], f"Split {split} is not available."
+        assert num_crops > 0, f"num_crops should be positive, got {num_crops}."
+
+        self.dataset = standardize_dataset_name(dataset)
+        self.split = split
+
+        self.__find_root__()
+        self.__make_dataset__()
+        #self.__check_sanity__()
+        self.indices = list(range(len(self.image_names)))
+
+        self.to_tensor = ToTensor()
+        self.normalize = Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        self.transforms = transforms
+
+        self.sigma = sigma
+        self.return_filename = return_filename
+        self.num_crops = num_crops
+        self.downscale = downscale
+
+    def __find_root__(self) -> None:
+        # 1. Get the directory where the script is located
+        # Assuming this file is in ~/CLIP-EBC/some_folder/file.py
+        # we go up until we find the 'data' directory
+        current_dir = Path(__file__).resolve().parent
+        
+        # Potential paths to check in order of priority
+        candidate_paths = [
+            # The specific path you confirmed exists via terminal
+            Path.home() / "CLIP-EBC/data/nwpu",
+            
+            # Relative to project root (up one or two levels)
+            current_dir.parent / "data" / self.dataset,
+            current_dir.parent.parent / "data" / self.dataset,
+            
+            # The specific shared HPC directory (if applicable)
+        ]
+
+        self.root = None
+        for path in candidate_paths:
+            if path.exists():
+                self.root = str(path)
+                print(f"Dataset root found: {self.root}")
+                break
+
+        if self.root is None:
+            raise FileNotFoundError(
+                f"Could not find dataset root for {self.dataset}. "
+                f"Checked: {[str(p) for p in candidate_paths]}"
+            )
+
+    def __make_dataset__(self) -> None:
+        image_npys = glob(os.path.join(self.root, self.split, "images", "*.npy"))
+        if len(image_npys) > 0:
+            self.image_type = "npy"
+            image_names = image_npys
+        else:
+            self.image_type = "jpg"
+            image_names = glob(os.path.join(self.root, self.split, "images", "*.jpg"))
+
+        label_names = glob(os.path.join(self.root, self.split, "labels", "*.npy"))
+        image_names = [os.path.basename(image_name) for image_name in image_names]
+        label_names = [os.path.basename(label_name) for label_name in label_names]
+        image_names.sort(key=get_id)
+        label_names.sort(key=get_id)
+        image_ids = tuple([get_id(image_name) for image_name in image_names])
+        label_ids = tuple([get_id(label_name) for label_name in label_names])
+
+
+        assert image_ids == label_ids, "image_ids and label_ids do not match."
+        self.image_names = tuple(image_names)
+        self.label_names = tuple(label_names)
+
+    def __len__(self) -> int:
+        return len(self.image_names)
+    
+    def __getitem__(self, idx: int):
+        image_name = self.image_names[idx]
+        label_name = self.label_names[idx]
+
+        image_path = os.path.join(self.root, self.split, "images", image_name)
+        label_path = os.path.join(self.root, self.split, "labels", label_name)
+
+        # 1. Load Image
+        if self.image_type == "npy":
+            image = torch.from_numpy(np.load(image_path)).float() / 255.
+        else:
+            image = Image.open(image_path).convert("RGB")
+            image = self.to_tensor(image)
+
+        # 2. Load Labels
+        label_data = np.load(label_path)
+        points = torch.from_numpy(np.array(label_data)).float()
+
+        # 3. SHARED CROP (Fixes the Batch Size Error)
+        # We pick a window (e.g. 896x896) from the original high-res image
+        # This ensures all outputs from this function have consistent dimensions
+        i, j, h, w = transforms.RandomResizedCrop.get_params(
+            image, scale=(0.5, 1.0), ratio=(0.75, 1.33)
+        )
+        image = TF.crop(image, i, j, h, w)
+        if points.shape[0] > 0:
+            mask = (points[:, 0] >= j) & (points[:, 0] < j + w) & \
+                (points[:, 1] >= i) & (points[:, 1] < i + h)
+            points = points[mask]
+            
+            # 2. Only offset if points still exist after masking
+            if points.shape[0] > 0:
+                points[:, 0] -= j
+                points[:, 1] -= i
+            else:
+                # Re-initialize as empty 2D tensor to keep shape consistent
+                points = torch.empty((0, 2))
+        else:
+            # Ensure points is a 2D empty tensor so the rest of the code doesn't crash
+            points = torch.empty((0, 2))
+
+        # Now gt_count will correctly be 0.0 for empty crops
+        gt_count = torch.tensor(len(points)).float()
+
+        # 4. TEACHER DATA (High Resolution)
+        # Resize the crop to 448x448 for the expert teacher
+        teacher_img = TF.resize(image, (448, 448))
+        # Important: CLIP uses a different normalization than ImageNet
+        teacher_img = self.normalize(teacher_img) 
+
+        # 5. STUDENT DATA (Low Resolution)
+        # Resize the SAME crop to 224x224 for the efficient student
+        student_img = TF.resize(image, (448//self.downscale, 448//self.downscale))
+        student_img = self.normalize(student_img)
+
+        # 6. GROUND TRUTH
+        # The count is just the number of points in this specific crop
+        gt_count = torch.tensor(len(points)).float()
+
+        return teacher_img, student_img, gt_count
+
+    
