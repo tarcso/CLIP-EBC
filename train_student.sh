@@ -11,15 +11,16 @@
 #BSUB -R "rusage[mem=20GB]"
 ### ---------------- specify wall-clock time (max allowed is 12:00) ----------------
 #BSUB -W 12:00
-#BSUB -o OUTPUT_FILE%J.out
-#BSUB -e OUTPUT_FILE%J.err
+#BSUB -o logs/OUTPUT_FILE%J.out
+#BSUB -e logs/OUTPUT_FILE%J.err
 
-source ~/miniforge3/bin/activate clip_ebc
+source ~/miniconda3/bin/activate clip_ebc
 cd "$LSB_SUBCWD"
+mkdir -p logs
 
 python train_distillation.py \
     --model clip_vit_l_14 --input_size 224 --reduction 8 --truncation 4 \
     --anchor_points average --prompt_type word --granularity fine \
     --num_vpt 32 --vpt_drop 0.0 \
     --weight_path ./checkpoints/nwpu/best_rmse_0.pth \
-    --device cuda --epochs 50 --lr 1e-5 --downscale 2 --batch_size 8
+    --device cuda --epochs 100 --lr 3e-5 --downscale 2 --batch_size 8

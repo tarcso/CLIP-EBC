@@ -36,7 +36,12 @@ def distillation_loss(student_pred, teacher_label):
         teacher_label = teacher_label.unsqueeze(1)
 
     if teacher_label.shape[2:] != student_pred.shape[2:]:
-        teacher_label = F.interpolate(teacher_label, size=student_pred.shape[2:], mode="area")
+        # mode="area" averages pixels when downsampling, which divides the density sum by the
+        # spatial ratio (e.g. 56x56->28x28 gives sum/4). Multiply back to preserve total count.
+        spatial_ratio = (teacher_label.shape[2] * teacher_label.shape[3]) / (
+            student_pred.shape[2] * student_pred.shape[3]
+        )
+        teacher_label = F.interpolate(teacher_label, size=student_pred.shape[2:], mode="area") * spatial_ratio
 
     density_loss = F.mse_loss(student_pred, teacher_label)
     count_loss = F.l1_loss(
@@ -56,13 +61,14 @@ def train_distilation(
     loss_fn,
     epochs: int,
     device: torch.device,
+    run_tag: str = "",
 ):
     teacher = teacher.to(device)
     teacher.eval()
 
     scaler = GradScaler()
 
-    history = {"train_loss": [], "val_loss": [], "val_mae": []}
+    history = {"train_loss": [], "val_loss": [], "val_mae": [], "val_rmse": []}
     best_mae = float("inf")
 
     for epoch in range(epochs):
@@ -77,12 +83,15 @@ def train_distilation(
             with torch.no_grad():
                 with autocast():
                     teacher_out = teacher(teacher_data)
-                    pseudo_labels = teacher_out[0] if isinstance(teacher_out, (list, tuple)) else teacher_out
+                    # teacher is in eval() → returns exp tensor directly (no tuple)
+                    pseudo_labels = teacher_out[0] if isinstance(teacher_out, tuple) else teacher_out
 
             optimizer.zero_grad()
             with autocast():
                 student_out = student(student_data)
-                pred = student_out[0] if isinstance(student_out, (list, tuple)) else student_out
+                # student is in train() → returns (logits, exp); use exp (index 1) for distillation,
+                # not logits (index 0) which has 5 channels and would mismatch teacher's 1-channel exp
+                pred = student_out[1] if isinstance(student_out, tuple) else student_out
                 loss = loss_fn(pred, pseudo_labels)
 
             scaler.scale(loss).backward()
@@ -98,10 +107,13 @@ def train_distilation(
         avg_train_loss = epoch_loss / len(train_dataloader)
         history["train_loss"].append(avg_train_loss)
 
-        # Validation
+        # Validation — fixed seed so random crops are identical across epochs,
+        # making MAE/RMSE comparable run-to-run.
+        torch.manual_seed(42)
         student.eval()
         val_loss = 0.0
-        val_mae = 0.0
+        val_sq_errors = []
+        val_abs_errors = []
         with torch.no_grad():
             for teacher_data, student_data, gt_count in val_dataloader:
                 teacher_data = teacher_data.to(device)
@@ -110,58 +122,80 @@ def train_distilation(
 
                 with autocast():
                     teacher_out = teacher(teacher_data)
-                    teacher_logits = teacher_out[0] if isinstance(teacher_out, (list, tuple)) else teacher_out
+                    # both are in eval() → return exp tensor directly (no tuple)
+                    teacher_exp = teacher_out[0] if isinstance(teacher_out, tuple) else teacher_out
 
                     student_out = student(student_data)
-                    student_logits = student_out[0] if isinstance(student_out, (list, tuple)) else student_out
+                    student_exp = student_out[0] if isinstance(student_out, tuple) else student_out
 
-                    loss = loss_fn(student_logits, teacher_logits)
+                    loss = loss_fn(student_exp, teacher_exp)
 
                 val_loss += loss.item()
-                pred_count = student_logits.sum(dim=(1, 2, 3))
-                val_mae += torch.abs(pred_count - gt_count).sum().item()
+                pred_count = student_exp.sum(dim=(1, 2, 3))
+                diff = pred_count - gt_count
+                val_abs_errors.append(diff.abs().cpu())
+                val_sq_errors.append((diff ** 2).cpu())
 
+        all_abs = torch.cat(val_abs_errors)
+        all_sq = torch.cat(val_sq_errors)
         avg_val_loss = val_loss / len(val_dataloader)
-        avg_mae = val_mae / len(val_dataloader.dataset)
+        avg_mae = all_abs.mean().item()
+        avg_rmse = all_sq.mean().sqrt().item()
         current_lr = scheduler.get_last_lr()[0]
 
         history["val_loss"].append(avg_val_loss)
         history["val_mae"].append(avg_mae)
+        history["val_rmse"].append(avg_rmse)
 
         print(
             f"Epoch {epoch + 1}/{epochs}: "
             f"Train Loss {avg_train_loss:.4f} | "
             f"Val Loss {avg_val_loss:.4f} | "
             f"MAE {avg_mae:.2f} | "
+            f"RMSE {avg_rmse:.2f} | "
             f"LR {current_lr:.2e}"
         )
 
+        os.makedirs("checkpoints/student", exist_ok=True)
+        torch.save(student.state_dict(), f"checkpoints/student/last_student{run_tag}.pth")
+
         if avg_mae < best_mae:
             best_mae = avg_mae
-            os.makedirs("checkpoints/student", exist_ok=True)
-            torch.save(student.state_dict(), "checkpoints/student/best_student.pth")
+            torch.save(student.state_dict(), f"checkpoints/student/best_student{run_tag}.pth")
             print(f"  -> Saved best student (MAE {best_mae:.2f})")
 
     os.makedirs("assets", exist_ok=True)
     epochs_range = range(1, epochs + 1)
 
-    plt.figure(figsize=(12, 5))
-    plt.subplot(1, 2, 1)
+    plt.figure(figsize=(18, 5))
+    plt.subplot(1, 3, 1)
     plt.plot(epochs_range, history["train_loss"], label="Train Loss")
     plt.plot(epochs_range, history["val_loss"], label="Val Loss")
     plt.title("Loss History")
     plt.xlabel("Epochs")
     plt.legend()
 
-    plt.subplot(1, 2, 2)
+    plt.subplot(1, 3, 2)
     plt.plot(epochs_range, history["val_mae"], label="Val MAE", color="orange")
     plt.title("Validation MAE")
     plt.xlabel("Epochs")
     plt.legend()
 
+    plt.subplot(1, 3, 3)
+    plt.plot(epochs_range, history["val_rmse"], label="Val RMSE", color="red")
+    plt.title("Validation RMSE")
+    plt.xlabel("Epochs")
+    plt.legend()
+
     plt.tight_layout()
-    plt.savefig("assets/training_metrics.png")
-    print("Metrics plot saved to assets/training_metrics.png")
+    plot_path = f"assets/training_metrics{run_tag}.png"
+    plt.savefig(plot_path)
+    print(f"Metrics plot saved to {plot_path}")
+
+    history_path = f"assets/training_history{run_tag}.json"
+    with open(history_path, "w") as f:
+        json.dump(history, f, indent=2)
+    print(f"Training history saved to {history_path}")
 
 
 def build_model_and_bins(args):
@@ -255,7 +289,7 @@ if __name__ == "__main__":
         val_data,
         batch_size=args.batch_size,
         shuffle=False,
-        num_workers=4,
+        num_workers=0,  # must be 0 so torch.manual_seed(42) before val controls crop randomness
         pin_memory=True,
     )
 
@@ -265,7 +299,9 @@ if __name__ == "__main__":
     optimizer = torch.optim.AdamW(student.parameters(), lr=args.lr, weight_decay=1e-4)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs, eta_min=1e-7)
 
+    run_tag = f"_e{args.epochs}_lr{args.lr:.0e}_ds{args.downscale}"
     train_distilation(
         teacher, student, train_loader, val_loader,
         optimizer, scheduler, distillation_loss, args.epochs, device,
+        run_tag=run_tag,
     )

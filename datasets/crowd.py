@@ -73,19 +73,17 @@ class Crowd(Dataset):
         self.num_crops = num_crops
 
     def __find_root__(self) -> None:
-        # 1. Define the specific HPC path
         hpc_path = "/dtu/blackhole/02/137570/MultiRes/NWPU_crowd"
-        
-        # 2. Local project fallback
         local_project_root = os.path.abspath(os.path.join(curr_dir, ".."))
         local_path = os.path.join(local_project_root, "data", self.dataset)
 
-        if self.dataset == "nwpu" and os.path.exists(hpc_path):
-            self.root = hpc_path
-        elif os.path.exists(local_path):
+        # Prefer local preprocessed data; HPC raw path has a flat structure
+        # that doesn't match the expected train/val/images layout.
+        if os.path.exists(local_path):
             self.root = local_path
+        elif self.dataset == "nwpu" and os.path.exists(hpc_path):
+            self.root = hpc_path
         else:
-            # Fallback for other datasets or environments
             self.root = local_path
 
     def __make_dataset__(self) -> None:
@@ -97,7 +95,16 @@ class Crowd(Dataset):
             self.image_type = "jpg"
             image_names = glob(os.path.join(self.root, self.split, "images", "*.jpg"))
 
-        label_names = glob(os.path.join(self.root, self.split, "jsons", "*.json"))
+        # Support both raw annotations (jsons/*.json) and preprocessed points (labels/*.npy)
+        json_labels = glob(os.path.join(self.root, self.split, "jsons", "*.json"))
+        npy_labels = glob(os.path.join(self.root, self.split, "labels", "*.npy"))
+        if len(json_labels) > 0:
+            self.label_type = "json"
+            label_names = json_labels
+        else:
+            self.label_type = "npy"
+            label_names = npy_labels
+
         image_names = [os.path.basename(image_name) for image_name in image_names]
         label_names = [os.path.basename(label_name) for label_name in label_names]
         image_names.sort(key=get_id)
@@ -144,7 +151,8 @@ class Crowd(Dataset):
         label_name = self.label_names[idx]
 
         image_path = os.path.join(self.root, self.split, "images", image_name)
-        label_path = os.path.join(self.root, self.split, "jsons", label_name)
+        label_subdir = "jsons" if self.label_type == "json" else "labels"
+        label_path = os.path.join(self.root, self.split, label_subdir, label_name)
 
         if self.image_type == "npy":
             with open(image_path, "rb") as f:
@@ -155,13 +163,15 @@ class Crowd(Dataset):
                 image = Image.open(f).convert("RGB")
             image = self.to_tensor(image)
 
-        with open(label_path, "rb") as f:
-            label_data = json.load(f)
-
-        if isinstance(label_data, dict) and 'points' in label_data:
-            points = np.array(label_data['points'])
+        if self.label_type == "json":
+            with open(label_path, "rb") as f:
+                label_data = json.load(f)
+            if isinstance(label_data, dict) and 'points' in label_data:
+                points = np.array(label_data['points'])
+            else:
+                points = np.array(label_data)
         else:
-            points = np.array(label_data)
+            points = np.array(np.load(label_path), dtype=np.float32)
 
         label = torch.from_numpy(points).float()
 
@@ -285,10 +295,10 @@ class Crowd_distilation(Dataset):
         local_project_root = os.path.abspath(os.path.join(curr_dir, ".."))
         local_path = os.path.join(local_project_root, "data", self.dataset)
 
-        if self.dataset == "nwpu" and os.path.exists(hpc_path):
-            self.root = hpc_path
-        elif os.path.exists(local_path):
+        if os.path.exists(local_path):
             self.root = local_path
+        elif self.dataset == "nwpu" and os.path.exists(hpc_path):
+            self.root = hpc_path
         else:
             self.root = local_path
 
@@ -381,5 +391,3 @@ class Crowd_distilation(Dataset):
         student_img = self.normalize(TF.resize(image, (student_size, student_size)))
 
         return teacher_img, student_img, gt_count
-
-    
