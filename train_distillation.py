@@ -1,11 +1,9 @@
 import torch
 from torch import nn
 from torch.optim import Optimizer
-from torch.utils.data import DataLoader
 from torch.cuda.amp import GradScaler, autocast
 import numpy as np
 from tqdm import tqdm
-from typing import Dict, Tuple
 import torch.nn.functional as F
 from datasets.crowd import Crowd_distilation
 import matplotlib.pyplot as plt
@@ -14,150 +12,191 @@ import copy
 import os
 import json
 from models import get_model
-from utils import get_config, sliding_window_predict
-from pathlib import Path
+from utils import get_config
+from torch.utils.data import DataLoader
 
 current_dir = os.path.abspath(os.path.dirname(__file__))
 
-def KL_loss(student_pred, teacher_label):
-    
-    if isinstance(student_pred, (list, tuple)): student_pred = student_pred[0]
-    if isinstance(teacher_label, (list, tuple)): teacher_label = teacher_label[0]
 
-    if student_pred.dim() == 3: student_pred = student_pred.unsqueeze(1)
-    if teacher_label.dim() == 3: teacher_label = teacher_label.unsqueeze(1)
+def distillation_loss(student_pred, teacher_label):
+    """MSE on density map values + L1 on total count.
 
-    teacher_label = F.interpolate(
-        teacher_label, 
-        size=(student_pred.shape[2], student_pred.shape[3]), 
-        mode='area'
+    MSE preserves absolute scale so the student learns both where the crowd is
+    and how many people are there, without the softmax normalisation destroying
+    count information.  The count term provides an explicit second-order signal.
+    """
+    if isinstance(student_pred, (list, tuple)):
+        student_pred = student_pred[0]
+    if isinstance(teacher_label, (list, tuple)):
+        teacher_label = teacher_label[0]
+
+    if student_pred.dim() == 3:
+        student_pred = student_pred.unsqueeze(1)
+    if teacher_label.dim() == 3:
+        teacher_label = teacher_label.unsqueeze(1)
+
+    if teacher_label.shape[2:] != student_pred.shape[2:]:
+        # mode="area" averages pixels when downsampling, which divides the density sum by the
+        # spatial ratio (e.g. 56x56->28x28 gives sum/4). Multiply back to preserve total count.
+        spatial_ratio = (teacher_label.shape[2] * teacher_label.shape[3]) / (
+            student_pred.shape[2] * student_pred.shape[3]
+        )
+        teacher_label = F.interpolate(teacher_label, size=student_pred.shape[2:], mode="area") * spatial_ratio
+
+    density_loss = F.mse_loss(student_pred, teacher_label)
+    count_loss = F.l1_loss(
+        student_pred.sum(dim=(1, 2, 3)),
+        teacher_label.sum(dim=(1, 2, 3)),
     )
-    p_s_tensor = student_pred.mean(dim=1).reshape(student_pred.shape[0], -1)
-    p_t_tensor = teacher_label.mean(dim=1).reshape(teacher_label.shape[0], -1)
+    return density_loss + 0.1 * count_loss
 
-    log_p_s = F.log_softmax(p_s_tensor, dim=1)
-    log_p_t = F.log_softmax(p_t_tensor, dim=1)
-    
-    kl = torch.sum(torch.exp(log_p_t) * (log_p_t - log_p_s), dim=1).mean()
-
-    count_loss = F.l1_loss(student_pred.sum(dim=(1,2,3)), teacher_label.sum(dim=(1,2,3)))
-    
-    return kl + count_loss
 
 def train_distilation(
-        teacher: nn.Module, 
-        student: nn.Module,
-        train_dataloader: DataLoader, 
-        val_dataloader: DataLoader,
-        optimizer: Optimizer,
-        loss_fn, 
-        epochs: int, 
-        device: torch.device):
-    
+    teacher: nn.Module,
+    student: nn.Module,
+    train_dataloader: DataLoader,
+    val_dataloader: DataLoader,
+    optimizer: Optimizer,
+    scheduler,
+    loss_fn,
+    epochs: int,
+    device: torch.device,
+    run_tag: str = "",
+):
     teacher = teacher.to(device)
     teacher.eval()
-    
-    # Trackers
-    history = {
-        'train_loss': [],
-        'val_loss': [],
-        'val_mae': []
-    }
 
-    best_mae = float('inf')
+    scaler = GradScaler()
+
+    history = {"train_loss": [], "val_loss": [], "val_mae": [], "val_rmse": []}
+    best_mae = float("inf")
 
     for epoch in range(epochs):
         student.train()
         epoch_loss = 0.0
-        data_iter = tqdm(train_dataloader, desc=f'Epoch {epoch}/{epochs}')
-        
-        for teacher_data, student_data, gt_count in data_iter:
-            teacher_data, student_data = teacher_data.to(device), student_data.to(device)
+        data_iter = tqdm(train_dataloader, desc=f"Epoch {epoch + 1}/{epochs}")
+
+        for teacher_data, student_data, _ in data_iter:
+            teacher_data = teacher_data.to(device)
+            student_data = student_data.to(device)
 
             with torch.no_grad():
-                teacher_outputs = teacher(teacher_data)
-                if isinstance(teacher_outputs, (list, tuple)):
-                    pseudo_labels = teacher_outputs[0]
-                else:
-                    pseudo_labels = teacher_outputs
+                with autocast():
+                    teacher_out = teacher(teacher_data)
+                    # teacher is in eval() → returns exp tensor directly (no tuple)
+                    pseudo_labels = teacher_out[0] if isinstance(teacher_out, tuple) else teacher_out
 
-            outputs = student(student_data)
-            if isinstance(outputs, (list, tuple)):
-                pred = outputs[0]  # Take the first element if it's a tuple
-            else:
-                pred = outputs
-            loss = loss_fn(pred, pseudo_labels)
-            
             optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+            with autocast():
+                student_out = student(student_data)
+                # student is in train() → returns (logits, exp); use exp (index 1) for distillation,
+                # not logits (index 0) which has 5 channels and would mismatch teacher's 1-channel exp
+                pred = student_out[1] if isinstance(student_out, tuple) else student_out
+                loss = loss_fn(pred, pseudo_labels)
+
+            scaler.scale(loss).backward()
+            scaler.unscale_(optimizer)
+            torch.nn.utils.clip_grad_norm_(student.parameters(), max_norm=1.0)
+            scaler.step(optimizer)
+            scaler.update()
 
             epoch_loss += loss.item()
             data_iter.set_postfix(loss=f"{loss.item():.4f}")
-        
+
+        scheduler.step()
         avg_train_loss = epoch_loss / len(train_dataloader)
-        history['train_loss'].append(avg_train_loss)
-        
-        ## Validation
+        history["train_loss"].append(avg_train_loss)
+
+        # Validation — fixed seed so random crops are identical across epochs,
+        # making MAE/RMSE comparable run-to-run.
+        torch.manual_seed(42)
         student.eval()
-        val_kl_loss = 0.0  
-        val_mae = 0.0
+        val_loss = 0.0
+        val_sq_errors = []
+        val_abs_errors = []
         with torch.no_grad():
             for teacher_data, student_data, gt_count in val_dataloader:
                 teacher_data = teacher_data.to(device)
                 student_data = student_data.to(device)
                 gt_count = gt_count.to(device)
 
-                teacher_out = teacher(teacher_data)
-                teacher_logits = teacher_out[0] if isinstance(teacher_out, (list, tuple)) else teacher_out
+                with autocast():
+                    teacher_out = teacher(teacher_data)
+                    # both are in eval() → return exp tensor directly (no tuple)
+                    teacher_exp = teacher_out[0] if isinstance(teacher_out, tuple) else teacher_out
 
-                student_out = student(student_data)
-                student_logits = student_out[0] if isinstance(student_out, (list, tuple)) else student_out
+                    student_out = student(student_data)
+                    student_exp = student_out[0] if isinstance(student_out, tuple) else student_out
 
-                loss = KL_loss(student_logits, teacher_logits) 
-                val_kl_loss += loss.item()
+                    loss = loss_fn(student_exp, teacher_exp)
 
-                pred_count = torch.sum(student_logits, dim=(1, 2, 3)) 
-            
-                val_mae += torch.abs(pred_count - gt_count).sum().item()
+                val_loss += loss.item()
+                pred_count = student_exp.sum(dim=(1, 2, 3))
+                diff = pred_count - gt_count
+                val_abs_errors.append(diff.abs().cpu())
+                val_sq_errors.append((diff ** 2).cpu())
 
-        avg_val_loss = val_kl_loss / len(val_dataloader)
-        avg_mae = val_mae / len(val_dataloader.dataset)
-        
-        history['val_loss'].append(avg_val_loss)
-        history['val_mae'].append(avg_mae)
+        all_abs = torch.cat(val_abs_errors)
+        all_sq = torch.cat(val_sq_errors)
+        avg_val_loss = val_loss / len(val_dataloader)
+        avg_mae = all_abs.mean().item()
+        avg_rmse = all_sq.mean().sqrt().item()
+        current_lr = scheduler.get_last_lr()[0]
 
-        print(f"Epoch {epoch}: Train Loss {avg_train_loss:.4f} | Val Loss {avg_val_loss:.4f} | MAE {avg_mae:.2f}")
+        history["val_loss"].append(avg_val_loss)
+        history["val_mae"].append(avg_mae)
+        history["val_rmse"].append(avg_rmse)
 
-        # Save Best Model
+        print(
+            f"Epoch {epoch + 1}/{epochs}: "
+            f"Train Loss {avg_train_loss:.4f} | "
+            f"Val Loss {avg_val_loss:.4f} | "
+            f"MAE {avg_mae:.2f} | "
+            f"RMSE {avg_rmse:.2f} | "
+            f"LR {current_lr:.2e}"
+        )
+
+        os.makedirs("checkpoints/student", exist_ok=True)
+        torch.save(student.state_dict(), f"checkpoints/student/last_student{run_tag}.pth")
+
         if avg_mae < best_mae:
             best_mae = avg_mae
-            os.makedirs('checkpoints/student', exist_ok=True)
-            torch.save(student.state_dict(), 'checkpoints/student/best_student.pth')
-        
-        os.makedirs('assets', exist_ok=True)
-    epochs_range = range(epochs)
+            torch.save(student.state_dict(), f"checkpoints/student/best_student{run_tag}.pth")
+            print(f"  -> Saved best student (MAE {best_mae:.2f})")
 
-    plt.figure(figsize=(12, 5))
+    os.makedirs("assets", exist_ok=True)
+    epochs_range = range(1, epochs + 1)
 
-    # Loss Plot
-    plt.subplot(1, 2, 1)
-    plt.plot(epochs_range, history['train_loss'], label='Train Loss')
-    plt.plot(epochs_range, history['val_loss'], label='Val Loss')
-    plt.title('Loss History')
-    plt.xlabel('Epochs')
+    plt.figure(figsize=(18, 5))
+    plt.subplot(1, 3, 1)
+    plt.plot(epochs_range, history["train_loss"], label="Train Loss")
+    plt.plot(epochs_range, history["val_loss"], label="Val Loss")
+    plt.title("Loss History")
+    plt.xlabel("Epochs")
     plt.legend()
 
-    # MAE Plot
-    plt.subplot(1, 2, 2)
-    plt.plot(epochs_range, history['val_mae'], label='Val MAE', color='orange')
-    plt.title('Validation Error (MAE)')
-    plt.xlabel('Epochs')
+    plt.subplot(1, 3, 2)
+    plt.plot(epochs_range, history["val_mae"], label="Val MAE", color="orange")
+    plt.title("Validation MAE")
+    plt.xlabel("Epochs")
+    plt.legend()
+
+    plt.subplot(1, 3, 3)
+    plt.plot(epochs_range, history["val_rmse"], label="Val RMSE", color="red")
+    plt.title("Validation RMSE")
+    plt.xlabel("Epochs")
     plt.legend()
 
     plt.tight_layout()
-    plt.savefig('assets/training_metrics.png')
-    print("Metrics plot saved to assets/training_metrics.png")
+    plot_path = f"assets/training_metrics{run_tag}.png"
+    plt.savefig(plot_path)
+    print(f"Metrics plot saved to {plot_path}")
+
+    history_path = f"assets/training_history{run_tag}.json"
+    with open(history_path, "w") as f:
+        json.dump(history, f, indent=2)
+    print(f"Training history saved to {history_path}")
+
 
 def build_model_and_bins(args):
     _ = get_config(vars(args).copy(), mute=False)
@@ -195,9 +234,8 @@ def build_model_and_bins(args):
     return model
 
 
-
 if __name__ == "__main__":
-    parser = ArgumentParser(description="Train Student model.")
+    parser = ArgumentParser(description="Train Student model via knowledge distillation.")
 
     # Model args
     parser.add_argument("--model", type=str, default="clip_vit_l_14")
@@ -214,53 +252,56 @@ if __name__ == "__main__":
     parser.add_argument("--weight_path", type=str, required=True)
 
     # Train args
-    parser.add_argument("--epochs", type=int, default=1000, help="Number of epochs to train.")
-    parser.add_argument("--lr", type=float, default=1e-4, help="The learning rate.")
-    parser.add_argument("--device", type=str, default='cpu', choices=["cpu", "cuda", "mps"])
+    parser.add_argument("--epochs", type=int, default=50)
+    parser.add_argument("--lr", type=float, default=1e-5)
+    parser.add_argument("--downscale", type=int, default=2, choices=[2, 4])
+    parser.add_argument("--batch_size", type=int, default=8)
+    parser.add_argument("--device", type=str, default="cpu", choices=["cpu", "cuda", "mps"])
+
     args = parser.parse_args()
     args.model = args.model.lower()
     device = torch.device(args.device)
 
     train_data = Crowd_distilation(
         dataset="nwpu",
-        split="train", 
-        sigma=4.0, 
+        split="train",
+        sigma=4.0,
         return_filename=False,
-        downscale=2
+        downscale=args.downscale,
     )
     val_data = Crowd_distilation(
         dataset="nwpu",
-        split="val", 
-        sigma=4.0, 
+        split="val",
+        sigma=4.0,
         return_filename=False,
-        downscale=2
+        downscale=args.downscale,
     )
 
     train_loader = DataLoader(
         train_data,
-        batch_size=8,       
-        shuffle=True,        
-        num_workers=4,       
-        pin_memory=True,     
-        drop_last=True       
+        batch_size=args.batch_size,
+        shuffle=True,
+        num_workers=4,
+        pin_memory=True,
+        drop_last=True,
     )
     val_loader = DataLoader(
         val_data,
-        batch_size=8, 
-        shuffle=False, 
-        num_workers=4,
-        pin_memory=True
+        batch_size=args.batch_size,
+        shuffle=False,
+        num_workers=0,  # must be 0 so torch.manual_seed(42) before val controls crop randomness
+        pin_memory=True,
     )
 
     teacher = build_model_and_bins(args).to(device)
     student = copy.deepcopy(teacher)
 
-    optimizer = torch.optim.Adam(student.parameters(), lr=args.lr)
-    
-    model = train_distilation(teacher, student, train_loader, val_loader, optimizer, KL_loss, args.epochs, device)
+    optimizer = torch.optim.AdamW(student.parameters(), lr=args.lr, weight_decay=1e-4)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs, eta_min=1e-7)
 
-
-
-
-
-       
+    run_tag = f"_e{args.epochs}_lr{args.lr:.0e}_ds{args.downscale}"
+    train_distilation(
+        teacher, student, train_loader, val_loader,
+        optimizer, scheduler, distillation_loss, args.epochs, device,
+        run_tag=run_tag,
+    )

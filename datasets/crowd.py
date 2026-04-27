@@ -73,19 +73,17 @@ class Crowd(Dataset):
         self.num_crops = num_crops
 
     def __find_root__(self) -> None:
-        # 1. Define the specific HPC path
         hpc_path = "/dtu/blackhole/02/137570/MultiRes/NWPU_crowd"
-        
-        # 2. Local project fallback
         local_project_root = os.path.abspath(os.path.join(curr_dir, ".."))
         local_path = os.path.join(local_project_root, "data", self.dataset)
 
-        if self.dataset == "nwpu" and os.path.exists(hpc_path):
-            self.root = hpc_path
-        elif os.path.exists(local_path):
+        # Prefer local preprocessed data; HPC raw path has a flat structure
+        # that doesn't match the expected train/val/images layout.
+        if os.path.exists(local_path):
             self.root = local_path
+        elif self.dataset == "nwpu" and os.path.exists(hpc_path):
+            self.root = hpc_path
         else:
-            # Fallback for other datasets or environments
             self.root = local_path
 
     def __make_dataset__(self) -> None:
@@ -97,7 +95,16 @@ class Crowd(Dataset):
             self.image_type = "jpg"
             image_names = glob(os.path.join(self.root, self.split, "images", "*.jpg"))
 
-        label_names = glob(os.path.join(self.root, self.split, "jsons", "*.json"))
+        # Support both raw annotations (jsons/*.json) and preprocessed points (labels/*.npy)
+        json_labels = glob(os.path.join(self.root, self.split, "jsons", "*.json"))
+        npy_labels = glob(os.path.join(self.root, self.split, "labels", "*.npy"))
+        if len(json_labels) > 0:
+            self.label_type = "json"
+            label_names = json_labels
+        else:
+            self.label_type = "npy"
+            label_names = npy_labels
+
         image_names = [os.path.basename(image_name) for image_name in image_names]
         label_names = [os.path.basename(label_name) for label_name in label_names]
         image_names.sort(key=get_id)
@@ -144,7 +151,8 @@ class Crowd(Dataset):
         label_name = self.label_names[idx]
 
         image_path = os.path.join(self.root, self.split, "images", image_name)
-        label_path = os.path.join(self.root, self.split, "jsons", label_name)
+        label_subdir = "jsons" if self.label_type == "json" else "labels"
+        label_path = os.path.join(self.root, self.split, label_subdir, label_name)
 
         if self.image_type == "npy":
             with open(image_path, "rb") as f:
@@ -155,13 +163,15 @@ class Crowd(Dataset):
                 image = Image.open(f).convert("RGB")
             image = self.to_tensor(image)
 
-        with open(label_path, "rb") as f:
-            label_data = json.load(f)
-
-        if isinstance(label_data, dict) and 'points' in label_data:
-            points = np.array(label_data['points'])
+        if self.label_type == "json":
+            with open(label_path, "rb") as f:
+                label_data = json.load(f)
+            if isinstance(label_data, dict) and 'points' in label_data:
+                points = np.array(label_data['points'])
+            else:
+                points = np.array(label_data)
         else:
-            points = np.array(label_data)
+            points = np.array(np.load(label_path), dtype=np.float32)
 
         label = torch.from_numpy(points).float()
 
@@ -281,35 +291,16 @@ class Crowd_distilation(Dataset):
         self.downscale = downscale
 
     def __find_root__(self) -> None:
-        # 1. Get the directory where the script is located
-        # Assuming this file is in ~/CLIP-EBC/some_folder/file.py
-        # we go up until we find the 'data' directory
-        current_dir = Path(__file__).resolve().parent
-        
-        # Potential paths to check in order of priority
-        candidate_paths = [
-            # The specific path you confirmed exists via terminal
-            Path.home() / "CLIP-EBC/data/nwpu",
-            
-            # Relative to project root (up one or two levels)
-            current_dir.parent / "data" / self.dataset,
-            current_dir.parent.parent / "data" / self.dataset,
-            
-            # The specific shared HPC directory (if applicable)
-        ]
+        hpc_path = "/dtu/blackhole/02/137570/MultiRes/NWPU_crowd"
+        local_project_root = os.path.abspath(os.path.join(curr_dir, ".."))
+        local_path = os.path.join(local_project_root, "data", self.dataset)
 
-        self.root = None
-        for path in candidate_paths:
-            if path.exists():
-                self.root = str(path)
-                print(f"Dataset root found: {self.root}")
-                break
-
-        if self.root is None:
-            raise FileNotFoundError(
-                f"Could not find dataset root for {self.dataset}. "
-                f"Checked: {[str(p) for p in candidate_paths]}"
-            )
+        if os.path.exists(local_path):
+            self.root = local_path
+        elif self.dataset == "nwpu" and os.path.exists(hpc_path):
+            self.root = hpc_path
+        else:
+            self.root = local_path
 
     def __make_dataset__(self) -> None:
         image_npys = glob(os.path.join(self.root, self.split, "images", "*.npy"))
@@ -320,14 +311,22 @@ class Crowd_distilation(Dataset):
             self.image_type = "jpg"
             image_names = glob(os.path.join(self.root, self.split, "images", "*.jpg"))
 
-        label_names = glob(os.path.join(self.root, self.split, "labels", "*.npy"))
+        # Support both raw (jsons/*.json) and preprocessed (labels/*.npy) formats
+        json_labels = glob(os.path.join(self.root, self.split, "jsons", "*.json"))
+        npy_labels = glob(os.path.join(self.root, self.split, "labels", "*.npy"))
+        if len(json_labels) > 0:
+            self.label_type = "json"
+            label_names = json_labels
+        else:
+            self.label_type = "npy"
+            label_names = npy_labels
+
         image_names = [os.path.basename(image_name) for image_name in image_names]
         label_names = [os.path.basename(label_name) for label_name in label_names]
         image_names.sort(key=get_id)
         label_names.sort(key=get_id)
         image_ids = tuple([get_id(image_name) for image_name in image_names])
         label_ids = tuple([get_id(label_name) for label_name in label_names])
-
 
         assert image_ids == label_ids, "image_ids and label_ids do not match."
         self.image_names = tuple(image_names)
@@ -341,60 +340,54 @@ class Crowd_distilation(Dataset):
         label_name = self.label_names[idx]
 
         image_path = os.path.join(self.root, self.split, "images", image_name)
-        label_path = os.path.join(self.root, self.split, "labels", label_name)
+        label_subdir = "jsons" if self.label_type == "json" else "labels"
+        label_path = os.path.join(self.root, self.split, label_subdir, label_name)
 
-        # 1. Load Image
+        # 1. Load image
         if self.image_type == "npy":
             image = torch.from_numpy(np.load(image_path)).float() / 255.
         else:
             image = Image.open(image_path).convert("RGB")
             image = self.to_tensor(image)
 
-        # 2. Load Labels
-        label_data = np.load(label_path)
-        points = torch.from_numpy(np.array(label_data)).float()
+        # 2. Load point annotations (both formats produce an Nx2 array of [x, y])
+        if self.label_type == "json":
+            with open(label_path, "r") as f:
+                label_data = json.load(f)
+            raw = label_data["points"] if isinstance(label_data, dict) and "points" in label_data else label_data
+            points = torch.from_numpy(np.array(raw, dtype=np.float32))
+        else:
+            points = torch.from_numpy(np.array(np.load(label_path), dtype=np.float32))
 
-        # 3. SHARED CROP (Fixes the Batch Size Error)
-        # We pick a window (e.g. 896x896) from the original high-res image
-        # This ensures all outputs from this function have consistent dimensions
+        if points.ndim == 1:
+            points = points.unsqueeze(0)
+        if points.shape[0] == 0:
+            points = torch.empty((0, 2))
+
+        # 3. Shared random crop so all batch items have the same size
         i, j, h, w = transforms.RandomResizedCrop.get_params(
             image, scale=(0.5, 1.0), ratio=(0.75, 1.33)
         )
         image = TF.crop(image, i, j, h, w)
+
+        # Filter and re-origin points to the crop (points are [x, y] = [col, row])
         if points.shape[0] > 0:
             mask = (points[:, 0] >= j) & (points[:, 0] < j + w) & \
-                (points[:, 1] >= i) & (points[:, 1] < i + h)
+                   (points[:, 1] >= i) & (points[:, 1] < i + h)
             points = points[mask]
-            
-            # 2. Only offset if points still exist after masking
             if points.shape[0] > 0:
                 points[:, 0] -= j
                 points[:, 1] -= i
             else:
-                # Re-initialize as empty 2D tensor to keep shape consistent
                 points = torch.empty((0, 2))
-        else:
-            # Ensure points is a 2D empty tensor so the rest of the code doesn't crash
-            points = torch.empty((0, 2))
 
-        # Now gt_count will correctly be 0.0 for empty crops
-        gt_count = torch.tensor(len(points)).float()
+        gt_count = torch.tensor(float(len(points)))
 
-        # 4. TEACHER DATA (High Resolution)
-        # Resize the crop to 448x448 for the expert teacher
-        teacher_img = TF.resize(image, (448, 448))
-        # Important: CLIP uses a different normalization than ImageNet
-        teacher_img = self.normalize(teacher_img) 
+        # 4. Teacher image: full-resolution crop resized to 448×448
+        teacher_img = self.normalize(TF.resize(image, (448, 448)))
 
-        # 5. STUDENT DATA (Low Resolution)
-        # Resize the SAME crop to 224x224 for the efficient student
-        student_img = TF.resize(image, (448//self.downscale, 448//self.downscale))
-        student_img = self.normalize(student_img)
-
-        # 6. GROUND TRUTH
-        # The count is just the number of points in this specific crop
-        gt_count = torch.tensor(len(points)).float()
+        # 5. Student image: same crop downscaled by factor
+        student_size = 448 // self.downscale
+        student_img = self.normalize(TF.resize(image, (student_size, student_size)))
 
         return teacher_img, student_img, gt_count
-
-    

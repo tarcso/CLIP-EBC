@@ -5,25 +5,39 @@
 [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/clip-ebc-clip-can-count-accurately-through/crowd-counting-on-shanghaitech-b)](https://paperswithcode.com/sota/crowd-counting-on-shanghaitech-b?p=clip-ebc-clip-can-count-accurately-through)
 [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/clip-ebc-clip-can-count-accurately-through/crowd-counting-on-nwpu-crowd-val)](https://paperswithcode.com/sota/crowd-counting-on-nwpu-crowd-val?p=clip-ebc-clip-can-count-accurately-through)
 
-This is a fork of the official [CLIP-EBC](https://github.com/Yiming-M/CLIP-EBC) repository, extended with:
+This is a fork of the official [CLIP-EBC](https://github.com/Yiming-M/CLIP-EBC) repository, extended as part of the DTU course 02501 Advanced Deep Learning in Computer Vision.
 
 - **Task 3** — baseline evaluation of CLIP-EBC (ViT-L/14) on the NWPU-Crowd validation set
-- **Task 4** — downscaling study: evaluating the model at 1×, 2×, and 4× resolution reduction to study the effect of image resolution on counting accuracy
+- **Task 4** — downscaling study: evaluating the model at 1×, 2×, and 4× resolution reduction
+- **Task 5** — teacher/student knowledge distillation: training a student model on 2× downscaled images using the teacher's density maps as pseudo-labels
 - Bug fixes to `utils/eval_utils.py` for robust sliding window prediction on small/downscaled images
 
 Based on the paper [*CLIP-EBC: CLIP Can Count Accurately through Enhanced Blockwise Classification*](https://arxiv.org/abs/2403.09281v1).
 
 ---
 
-## Results on NWPU Val — Downscaling Study
+## Results on NWPU Val
 
-| **Downscale Factor** | **Eval Resolution** | **MAE** | **RMSE** |
-|----------------------|---------------------|---------|----------|
-| 1× (original)        | full                | ~61     | ~278     |
-| 2×                   | half                | TBD     | TBD      |
-| 4×                   | quarter             | 109.09  | 566.58   |
+### Downscaling study (Task 4) — teacher model, no retraining
 
-> The model was not retrained — only the input images are downscaled at inference time. Ground truth counts remain unchanged.
+| **Downscale Factor** | **MAE** | **RMSE** |
+|----------------------|---------|----------|
+| 1× (original)        | 34.49   | 79.71    |
+| 2×                   | 52.78   | 288.49   |
+| 4×                   | 109.09  | 566.58   |
+
+> Only the input images are downscaled at inference time. Ground truth counts remain unchanged.
+
+### Knowledge distillation (Task 5) — student model at 2× downscale
+
+| **Model** | **MAE** | **RMSE** |
+|-----------|---------|----------|
+| Teacher @ 1× (upper bound) | 34.49 | 79.71 |
+| Teacher @ 2× (baseline to beat) | 52.78 | 288.49 |
+| Student @ 2× (50 epochs, lr=1e-5) | 102.65 | 230.52 |
+| Student @ 2× (100 epochs, lr=3e-5) | TBD | TBD |
+
+> The student starts from the teacher's pretrained weights and is fine-tuned on 2× downscaled images using the teacher's density maps as pseudo-labels (no extra annotations needed). RMSE already improved significantly (288→230), showing distillation reduces the worst-case failures on large crowds.
 
 ---
 
@@ -56,9 +70,12 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
+> `requirements.txt` includes `--extra-index-url https://download.pytorch.org/whl/cu121` so PyTorch with CUDA 12.1 support is installed automatically.
+
 ### 3. Link the dataset (DTU HPC only)
 
 ```bash
+mkdir -p data
 ln -s /dtu/blackhole/02/137570/MultiRes/NWPU_crowd data/NWPU-Crowd
 ```
 
@@ -68,15 +85,21 @@ ln -s /dtu/blackhole/02/137570/MultiRes/NWPU_crowd data/NWPU-Crowd
 bash preprocess.sh
 ```
 
-This populates `data/nwpu/` with train/val/test splits:
+This populates `data/nwpu/` with train/val/test splits. Errors about ShanghaiTech and UCF-QNRF are expected — those datasets are not available on HPC.
 
 ```
 data/nwpu/
+├── train/images/
 ├── train/labels/
 ├── val/images/
 ├── val/labels/
 └── test/images/
 ```
+
+> The test set has no ground truth labels and can be deleted after preprocessing to save ~3.4GB:
+> ```bash
+> rm -rf data/nwpu/test
+> ```
 
 ### 5. Download the checkpoint
 
@@ -151,6 +174,28 @@ task4_outputs_downscale/
 ├── scale_4p0/
 └── scale_comparison.csv        ← MAE/RMSE across all scales side by side
 ```
+
+### Task 5 — Teacher/student distillation
+
+Train the student (submit on DTU HPC):
+
+```bash
+bsub < train_student.sh
+```
+
+The student is trained with:
+- Teacher frozen, providing density map pseudo-labels at 448×448
+- Student fine-tuned on the same crops downscaled to 224×224
+- Loss: MSE on density maps + 0.1× L1 on total count
+- Optimizer: AdamW, lr=3e-5, cosine LR decay, 100 epochs
+
+Evaluate student vs teacher on full val images:
+
+```bash
+bsub < eval_student.sh
+```
+
+Results are saved to `student_eval_outputs/`.
 
 ---
 
