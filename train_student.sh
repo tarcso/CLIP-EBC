@@ -23,4 +23,4 @@ python train_distillation.py \
     --anchor_points average --prompt_type word --granularity fine \
     --num_vpt 32 --vpt_drop 0.0 \
     --weight_path ./checkpoints/nwpu/best_rmse_0.pth \
-    --device cuda --epochs 100 --lr 3e-5 --downscale 2 --batch_size 8
+    --device cuda --epochs 50 --lr 3e-5 --downscale 4 --batch_size 8

@@ -1,0 +1,91 @@
+model          :	clip_vit_l_14
+input_size     :	224
+reduction      :	8
+regression     :	False
+truncation     :	4
+anchor_points  :	average
+prompt_type    :	word
+granularity    :	fine
+num_vpt        :	32
+vpt_drop       :	0.0
+shallow_vpt    :	False
+weight_path    :	./checkpoints/nwpu/best_rmse_0.pth
+epochs         :	10
+lr             :	1e-05
+downscale      :	2
+batch_size     :	8
+device         :	cuda
+Missing keys: []
+Unexpected keys: ['proj']
+All keys matched successfully.
+Initialized model with text prompts: ['There is no person.', 'There is one person.', 'There are two people.', 'There are three people.', 'There are more than four people.']
+
+------------------------------------------------------------
+Sender: LSF System <lsfadmin@hpc.dtu.dk>
+Subject: Job 28297337: <Distill_CLIP> in cluster <dcc> Exited
+
+Job <Distill_CLIP> was submitted from host <hpclogin1> by user <s253771> in cluster <dcc> at Sun Apr 26 20:43:27 2026
+Job was executed on host(s) <4*n-62-11-15>, in queue <gpuv100>, as user <s253771> in cluster <dcc> at Sun Apr 26 20:45:19 2026
+</zhome/3b/2/223841> was used as the home directory.
+</zhome/3b/2/223841/ADLCV/CLIP-EBC> was used as the working directory.
+Started at Sun Apr 26 20:45:19 2026
+Terminated at Sun Apr 26 20:52:34 2026
+Results reported at Sun Apr 26 20:52:34 2026
+
+Your job looked like:
+
+------------------------------------------------------------
+# LSBATCH: User input
+#!/bin/sh
+### ---------------- specify queue name ----------------
+#BSUB -q gpuv100
+#BSUB -gpu "num=1"
+### ---------------- specify job name ----------------
+#BSUB -J Distill_CLIP
+### ---------------- specify number of cores ----------------
+#BSUB -n 4
+#BSUB -R "span[hosts=1]"
+### ---------------- specify CPU memory requirements ----------------
+#BSUB -R "rusage[mem=20GB]"
+### ---------------- specify wall-clock time (max allowed is 12:00) ----------------
+#BSUB -W 12:00
+#BSUB -o logs/OUTPUT_FILE%J.out
+#BSUB -e logs/OUTPUT_FILE%J.err
+
+source ~/miniconda3/bin/activate clip_ebc
+cd "$LSB_SUBCWD"
+mkdir -p logs
+
+python train_distillation.py \
+    --model clip_vit_l_14 --input_size 224 --reduction 8 --truncation 4 \
+    --anchor_points average --prompt_type word --granularity fine \
+    --num_vpt 32 --vpt_drop 0.0 \
+    --weight_path ./checkpoints/nwpu/best_rmse_0.pth \
+    --device cuda --epochs 10 --lr 1e-5 --downscale 2 --batch_size 8
+
+------------------------------------------------------------
+
+TERM_OWNER: job killed by owner.
+Exited with exit code 130.
+
+Resource usage summary:
+
+    CPU time :                                   612.00 sec.
+    Max Memory :                                 2714 MB
+    Average Memory :                             1593.60 MB
+    Total Requested Memory :                     81920.00 MB
+    Delta Memory :                               79206.00 MB
+    Max Swap :                                   -
+    Max Processes :                              8
+    Max Threads :                                28
+    Run time :                                   434 sec.
+    Turnaround time :                            547 sec.
+
+The output (if any) is above this job summary.
+
+
+
+PS:
+
+Read file <logs/OUTPUT_FILE28297337.err> for stderr output of this job.
+
