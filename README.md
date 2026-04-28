@@ -9,7 +9,8 @@ This is a fork of the official [CLIP-EBC](https://github.com/Yiming-M/CLIP-EBC) 
 
 - **Task 3** — baseline evaluation of CLIP-EBC (ViT-L/14) on the NWPU-Crowd validation set
 - **Task 4** — downscaling study: evaluating the model at 1×, 2×, and 4× resolution reduction
-- **Task 5** — teacher/student knowledge distillation: training a student model on 2× downscaled images using the teacher's density maps as pseudo-labels
+- **Task 5** — teacher/student knowledge distillation: training student models on 2× and 4× downscaled images
+- **Task 6** — real-world evaluation on zoom in/out image pairs (including king's crowning photos)
 - Bug fixes to `utils/eval_utils.py` for robust sliding window prediction on small/downscaled images
 
 Based on the paper [*CLIP-EBC: CLIP Can Count Accurately through Enhanced Blockwise Classification*](https://arxiv.org/abs/2403.09281v1).
@@ -28,7 +29,7 @@ Based on the paper [*CLIP-EBC: CLIP Can Count Accurately through Enhanced Blockw
 
 > Only the input images are downscaled at inference time. Ground truth counts remain unchanged.
 
-### Knowledge distillation (Task 5) — student model at 2× downscale
+### Knowledge distillation (Task 5) — 2× downscale
 
 | **Model** | **MAE** | **RMSE** |
 |-----------|---------|----------|
@@ -38,6 +39,25 @@ Based on the paper [*CLIP-EBC: CLIP Can Count Accurately through Enhanced Blockw
 | Student @ 2× (100 epochs, lr=3e-5) | 113.00 | 210.96 |
 
 > The student starts from the teacher's pretrained weights and is fine-tuned on 2× downscaled images using the teacher's density maps as pseudo-labels (no extra annotations needed). RMSE improved significantly across both runs (288→210), showing distillation reduces worst-case failures on dense crowds. The 50-epoch run gives better MAE; the 100-epoch run overfit after epoch 44 but achieved the lowest RMSE.
+
+### Knowledge distillation (Task 5) — 4× downscale
+
+| **Model** | **MAE** | **RMSE** |
+|-----------|---------|----------|
+| Teacher @ 1× (upper bound) | 34.49 | 79.71 |
+| Teacher @ 4× (baseline to beat) | 109.09 | 566.58 |
+| Student @ 4× (50 epochs, lr=3e-5) | TBD | TBD |
+
+### Real-world evaluation (Task 6) — zoom in/out pairs
+
+61 image pairs with varying zoom ratios (~1.2× to ~7.5×). No ground truth — predictions only.
+
+| **Folder** | **Zoom ratio** | **Teacher HR** | **Teacher LR** | **Student 2× LR** | **Student 4× LR** |
+|-----------|---------------|---------------|---------------|------------------|------------------|
+| 60 (king's crowning) | ~7.5× | TBD | TBD | TBD | TBD |
+| Average (all 61 pairs) | — | TBD | TBD | TBD | TBD |
+
+> Real-world images from `/dtu/blackhole/02/137570/MultiRes/test`. Each folder contains one HR and one LR image of the same scene taken at different focal lengths.
 
 ---
 
@@ -101,19 +121,27 @@ data/nwpu/
 > rm -rf data/nwpu/test
 > ```
 
-### 5. Download the checkpoint
+### 5. Download the checkpoints
 
-Download the pretrained ViT-L/14 RMSE model from the [releases page](https://github.com/Yiming-M/CLIP-EBC/releases):
+**Teacher (pretrained CLIP-EBC ViT-L/14):** download from the [releases page](https://github.com/Yiming-M/CLIP-EBC/releases):
 
 ```bash
 wget https://github.com/Yiming-M/CLIP-EBC/releases/download/v1.0.0/NWPU_CLIP_ViT_B_16_Word_rmse.tgz
 tar -xzf NWPU_CLIP_ViT_B_16_Word_rmse.tgz.tar.gz
 ```
 
-The checkpoint should end up at:
+The checkpoint should end up at `checkpoints/nwpu/best_rmse_0.pth`.
 
+**Student (distilled):** available on HuggingFace at [dimos-stavaris/clip-ebc-student-teacher](https://huggingface.co/dimos-stavaris/clip-ebc-student-teacher):
+
+```bash
+hf download dimos-stavaris/clip-ebc-student-teacher best_student_e50_lr1e-5.pth --local-dir checkpoints/student/
 ```
-checkpoints/nwpu/best_rmse_0.pth
+
+Or in Python:
+```python
+from huggingface_hub import hf_hub_download
+hf_hub_download(repo_id="dimos-stavaris/clip-ebc-student-teacher", filename="best_student_e50_lr1e-5.pth", local_dir="checkpoints/student/")
 ```
 
 ---
@@ -185,9 +213,11 @@ bsub < train_student.sh
 
 The student is trained with:
 - Teacher frozen, providing density map pseudo-labels at 448×448
-- Student fine-tuned on the same crops downscaled to 224×224
+- Student fine-tuned on the same crops downscaled (2× → 224×224, 4× → 112×112)
 - Loss: MSE on density maps + 0.1× L1 on total count
-- Optimizer: AdamW, lr=3e-5, cosine LR decay, 100 epochs
+- Optimizer: AdamW, lr=3e-5, cosine LR decay, 50 epochs
+
+Change `--downscale 2` to `--downscale 4` in `train_student.sh` for the 4× experiment.
 
 Evaluate student vs teacher on full val images:
 
@@ -195,7 +225,15 @@ Evaluate student vs teacher on full val images:
 bsub < eval_student.sh
 ```
 
-Results are saved to `student_eval_outputs/`.
+Results are saved to `student_eval_outputs/` (tagged by epochs, lr, and downscale factor).
+
+### Task 6 — Real-world evaluation
+
+```bash
+bsub < eval_realworld.sh
+```
+
+Runs teacher and both students on all 61 zoom in/out pairs in `/dtu/blackhole/02/137570/MultiRes/test`. Results and visualizations saved to `realworld_outputs/`.
 
 ---
 
