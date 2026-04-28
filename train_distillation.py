@@ -14,6 +14,11 @@ import json
 from models import get_model
 from utils import get_config
 from torch.utils.data import DataLoader
+try:
+    from huggingface_hub import HfApi
+    HF_AVAILABLE = True
+except ImportError:
+    HF_AVAILABLE = False
 
 current_dir = os.path.abspath(os.path.dirname(__file__))
 
@@ -156,11 +161,9 @@ def train_distilation(
             f"LR {current_lr:.2e}"
         )
 
-        os.makedirs("checkpoints/student", exist_ok=True)
-        torch.save(student.state_dict(), f"checkpoints/student/last_student{run_tag}.pth")
-
         if avg_mae < best_mae:
             best_mae = avg_mae
+            os.makedirs("checkpoints/student", exist_ok=True)
             torch.save(student.state_dict(), f"checkpoints/student/best_student{run_tag}.pth")
             print(f"  -> Saved best student (MAE {best_mae:.2f})")
 
@@ -196,6 +199,21 @@ def train_distilation(
     with open(history_path, "w") as f:
         json.dump(history, f, indent=2)
     print(f"Training history saved to {history_path}")
+
+    # Upload best checkpoint to HuggingFace
+    best_ckpt = f"checkpoints/student/best_student{run_tag}.pth"
+    if HF_AVAILABLE and os.path.exists(best_ckpt):
+        try:
+            api = HfApi()
+            api.upload_file(
+                path_or_fileobj=best_ckpt,
+                path_in_repo=os.path.basename(best_ckpt),
+                repo_id="dimos-stavaris/clip-ebc-student-teacher",
+                repo_type="model",
+            )
+            print(f"Uploaded {os.path.basename(best_ckpt)} to HuggingFace")
+        except Exception as e:
+            print(f"HuggingFace upload skipped: {e}")
 
 
 def build_model_and_bins(args):
