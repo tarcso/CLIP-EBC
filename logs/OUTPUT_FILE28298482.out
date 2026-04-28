@@ -1,0 +1,203 @@
+model          :	clip_vit_l_14
+input_size     :	224
+reduction      :	8
+regression     :	False
+truncation     :	4
+anchor_points  :	average
+prompt_type    :	word
+granularity    :	fine
+num_vpt        :	32
+vpt_drop       :	0.0
+shallow_vpt    :	False
+weight_path    :	./checkpoints/nwpu/best_rmse_0.pth
+epochs         :	100
+lr             :	3e-05
+downscale      :	2
+batch_size     :	8
+device         :	cuda
+Missing keys: []
+Unexpected keys: ['proj']
+All keys matched successfully.
+Initialized model with text prompts: ['There is no person.', 'There is one person.', 'There are two people.', 'There are three people.', 'There are more than four people.']
+Epoch 1/100: Train Loss 2.9804 | Val Loss 2.6307 | MAE 124.56 | RMSE 476.55 | LR 3.00e-05
+  -> Saved best student (MAE 124.56)
+Epoch 2/100: Train Loss 2.6335 | Val Loss 2.6233 | MAE 119.95 | RMSE 465.56 | LR 3.00e-05
+  -> Saved best student (MAE 119.95)
+Epoch 3/100: Train Loss 2.4146 | Val Loss 2.5620 | MAE 119.32 | RMSE 462.62 | LR 2.99e-05
+  -> Saved best student (MAE 119.32)
+Epoch 4/100: Train Loss 2.2456 | Val Loss 2.5229 | MAE 120.94 | RMSE 464.26 | LR 2.99e-05
+Epoch 5/100: Train Loss 2.1194 | Val Loss 2.3853 | MAE 121.23 | RMSE 457.81 | LR 2.98e-05
+Epoch 6/100: Train Loss 1.9651 | Val Loss 2.3433 | MAE 117.58 | RMSE 442.08 | LR 2.97e-05
+  -> Saved best student (MAE 117.58)
+Epoch 7/100: Train Loss 1.8635 | Val Loss 2.2823 | MAE 117.59 | RMSE 446.15 | LR 2.96e-05
+Epoch 8/100: Train Loss 1.7170 | Val Loss 2.2574 | MAE 117.33 | RMSE 439.17 | LR 2.95e-05
+  -> Saved best student (MAE 117.33)
+Epoch 9/100: Train Loss 1.6120 | Val Loss 2.2403 | MAE 115.75 | RMSE 434.67 | LR 2.94e-05
+  -> Saved best student (MAE 115.75)
+Epoch 10/100: Train Loss 1.5054 | Val Loss 2.2543 | MAE 115.56 | RMSE 428.90 | LR 2.93e-05
+  -> Saved best student (MAE 115.56)
+Epoch 11/100: Train Loss 1.3858 | Val Loss 2.3607 | MAE 116.66 | RMSE 423.85 | LR 2.91e-05
+Epoch 12/100: Train Loss 1.3514 | Val Loss 2.3440 | MAE 116.06 | RMSE 423.58 | LR 2.90e-05
+Epoch 13/100: Train Loss 1.2679 | Val Loss 2.3381 | MAE 115.72 | RMSE 422.63 | LR 2.88e-05
+Epoch 14/100: Train Loss 1.2258 | Val Loss 2.2409 | MAE 115.54 | RMSE 426.21 | LR 2.86e-05
+  -> Saved best student (MAE 115.54)
+Epoch 15/100: Train Loss 1.1673 | Val Loss 2.3176 | MAE 111.72 | RMSE 415.21 | LR 2.84e-05
+  -> Saved best student (MAE 111.72)
+Epoch 16/100: Train Loss 1.1611 | Val Loss 2.2341 | MAE 115.35 | RMSE 422.21 | LR 2.82e-05
+Epoch 17/100: Train Loss 1.0913 | Val Loss 2.3466 | MAE 116.28 | RMSE 422.92 | LR 2.79e-05
+Epoch 18/100: Train Loss 1.0642 | Val Loss 2.3309 | MAE 116.65 | RMSE 419.82 | LR 2.77e-05
+Epoch 19/100: Train Loss 1.0472 | Val Loss 2.2276 | MAE 115.92 | RMSE 424.77 | LR 2.74e-05
+Epoch 20/100: Train Loss 1.0144 | Val Loss 2.2391 | MAE 114.77 | RMSE 420.87 | LR 2.71e-05
+Epoch 21/100: Train Loss 0.9922 | Val Loss 2.3048 | MAE 113.74 | RMSE 419.10 | LR 2.69e-05
+Epoch 22/100: Train Loss 0.9959 | Val Loss 2.2766 | MAE 114.27 | RMSE 418.96 | LR 2.66e-05
+Epoch 23/100: Train Loss 0.9222 | Val Loss 2.2761 | MAE 114.19 | RMSE 422.09 | LR 2.63e-05
+Epoch 24/100: Train Loss 0.9998 | Val Loss 2.3350 | MAE 114.12 | RMSE 419.39 | LR 2.59e-05
+Epoch 25/100: Train Loss 0.9770 | Val Loss 2.2841 | MAE 116.26 | RMSE 422.01 | LR 2.56e-05
+Epoch 26/100: Train Loss 0.9000 | Val Loss 2.2294 | MAE 117.82 | RMSE 430.58 | LR 2.53e-05
+Epoch 27/100: Train Loss 0.9193 | Val Loss 2.2927 | MAE 115.70 | RMSE 417.46 | LR 2.49e-05
+Epoch 28/100: Train Loss 0.8653 | Val Loss 2.2620 | MAE 116.92 | RMSE 426.11 | LR 2.46e-05
+Epoch 29/100: Train Loss 0.8833 | Val Loss 2.2723 | MAE 118.06 | RMSE 423.12 | LR 2.42e-05
+Epoch 30/100: Train Loss 0.8409 | Val Loss 2.2730 | MAE 116.19 | RMSE 423.76 | LR 2.38e-05
+Epoch 31/100: Train Loss 0.8243 | Val Loss 2.2721 | MAE 116.79 | RMSE 424.00 | LR 2.35e-05
+Epoch 32/100: Train Loss 0.8124 | Val Loss 2.2397 | MAE 117.83 | RMSE 429.51 | LR 2.31e-05
+Epoch 33/100: Train Loss 0.8993 | Val Loss 2.3314 | MAE 113.16 | RMSE 425.34 | LR 2.27e-05
+Epoch 34/100: Train Loss 0.8302 | Val Loss 2.2690 | MAE 114.61 | RMSE 427.00 | LR 2.23e-05
+Epoch 35/100: Train Loss 0.8672 | Val Loss 2.3615 | MAE 113.51 | RMSE 421.87 | LR 2.18e-05
+Epoch 36/100: Train Loss 0.8677 | Val Loss 2.3271 | MAE 111.79 | RMSE 420.17 | LR 2.14e-05
+Epoch 37/100: Train Loss 0.8426 | Val Loss 2.3070 | MAE 113.87 | RMSE 421.95 | LR 2.10e-05
+Epoch 38/100: Train Loss 0.8360 | Val Loss 2.3581 | MAE 112.66 | RMSE 418.06 | LR 2.06e-05
+Epoch 39/100: Train Loss 0.7797 | Val Loss 2.3524 | MAE 112.59 | RMSE 418.64 | LR 2.01e-05
+Epoch 40/100: Train Loss 0.7669 | Val Loss 2.4634 | MAE 112.33 | RMSE 427.44 | LR 1.97e-05
+Epoch 41/100: Train Loss 0.7467 | Val Loss 2.4557 | MAE 111.52 | RMSE 418.41 | LR 1.92e-05
+  -> Saved best student (MAE 111.52)
+Epoch 42/100: Train Loss 0.7654 | Val Loss 2.4429 | MAE 112.82 | RMSE 420.58 | LR 1.88e-05
+Epoch 43/100: Train Loss 0.7649 | Val Loss 2.5169 | MAE 111.73 | RMSE 423.18 | LR 1.83e-05
+Epoch 44/100: Train Loss 0.7182 | Val Loss 2.5157 | MAE 110.71 | RMSE 414.80 | LR 1.79e-05
+  -> Saved best student (MAE 110.71)
+Epoch 45/100: Train Loss 0.7110 | Val Loss 2.4443 | MAE 112.08 | RMSE 422.22 | LR 1.74e-05
+Epoch 46/100: Train Loss 0.7829 | Val Loss 2.3555 | MAE 113.73 | RMSE 423.05 | LR 1.69e-05
+Epoch 47/100: Train Loss 0.7786 | Val Loss 2.2768 | MAE 116.73 | RMSE 433.75 | LR 1.65e-05
+Epoch 48/100: Train Loss 0.7707 | Val Loss 2.2943 | MAE 113.15 | RMSE 422.13 | LR 1.60e-05
+Epoch 49/100: Train Loss 0.6666 | Val Loss 2.3159 | MAE 113.12 | RMSE 422.15 | LR 1.55e-05
+Epoch 50/100: Train Loss 0.6850 | Val Loss 2.2362 | MAE 115.38 | RMSE 428.22 | LR 1.51e-05
+Epoch 51/100: Train Loss 0.6709 | Val Loss 2.2145 | MAE 115.76 | RMSE 430.01 | LR 1.46e-05
+Epoch 52/100: Train Loss 0.6829 | Val Loss 2.1833 | MAE 117.64 | RMSE 431.56 | LR 1.41e-05
+Epoch 53/100: Train Loss 0.6834 | Val Loss 2.2139 | MAE 116.39 | RMSE 427.66 | LR 1.36e-05
+Epoch 54/100: Train Loss 0.6259 | Val Loss 2.2101 | MAE 115.96 | RMSE 425.13 | LR 1.32e-05
+Epoch 55/100: Train Loss 0.6092 | Val Loss 2.2747 | MAE 114.71 | RMSE 424.12 | LR 1.27e-05
+Epoch 56/100: Train Loss 0.6379 | Val Loss 2.2751 | MAE 113.88 | RMSE 424.73 | LR 1.22e-05
+Epoch 57/100: Train Loss 0.6040 | Val Loss 2.2616 | MAE 114.92 | RMSE 425.09 | LR 1.18e-05
+Epoch 58/100: Train Loss 0.5866 | Val Loss 2.2938 | MAE 114.08 | RMSE 424.35 | LR 1.13e-05
+Epoch 59/100: Train Loss 0.5955 | Val Loss 2.2281 | MAE 115.10 | RMSE 423.04 | LR 1.09e-05
+Epoch 60/100: Train Loss 0.5399 | Val Loss 2.2215 | MAE 115.77 | RMSE 423.31 | LR 1.04e-05
+Epoch 61/100: Train Loss 0.5446 | Val Loss 2.2382 | MAE 116.76 | RMSE 425.68 | LR 9.99e-06
+Epoch 62/100: Train Loss 0.5289 | Val Loss 2.2360 | MAE 116.78 | RMSE 426.18 | LR 9.55e-06
+Epoch 63/100: Train Loss 0.5332 | Val Loss 2.2214 | MAE 117.33 | RMSE 427.05 | LR 9.11e-06
+Epoch 64/100: Train Loss 0.5445 | Val Loss 2.2201 | MAE 117.17 | RMSE 424.29 | LR 8.68e-06
+Epoch 65/100: Train Loss 0.5679 | Val Loss 2.2351 | MAE 117.26 | RMSE 427.16 | LR 8.26e-06
+Epoch 66/100: Train Loss 0.5152 | Val Loss 2.2546 | MAE 116.61 | RMSE 422.65 | LR 7.85e-06
+Epoch 67/100: Train Loss 0.5528 | Val Loss 2.2183 | MAE 116.68 | RMSE 423.86 | LR 7.44e-06
+Epoch 68/100: Train Loss 0.5362 | Val Loss 2.2195 | MAE 116.18 | RMSE 423.57 | LR 7.04e-06
+Epoch 69/100: Train Loss 0.4908 | Val Loss 2.2378 | MAE 116.47 | RMSE 423.06 | LR 6.65e-06
+Epoch 70/100: Train Loss 0.5163 | Val Loss 2.2236 | MAE 117.22 | RMSE 425.54 | LR 6.26e-06
+Epoch 71/100: Train Loss 0.5058 | Val Loss 2.2255 | MAE 116.30 | RMSE 423.70 | LR 5.89e-06
+Epoch 72/100: Train Loss 0.4828 | Val Loss 2.2087 | MAE 115.72 | RMSE 423.68 | LR 5.52e-06
+Epoch 73/100: Train Loss 0.4735 | Val Loss 2.2426 | MAE 114.84 | RMSE 420.39 | LR 5.16e-06
+Epoch 74/100: Train Loss 0.4743 | Val Loss 2.2666 | MAE 114.49 | RMSE 418.25 | LR 4.82e-06
+Epoch 75/100: Train Loss 0.4788 | Val Loss 2.2608 | MAE 114.73 | RMSE 420.85 | LR 4.48e-06
+Epoch 76/100: Train Loss 0.4588 | Val Loss 2.2768 | MAE 114.17 | RMSE 420.61 | LR 4.15e-06
+Epoch 77/100: Train Loss 0.4482 | Val Loss 2.2777 | MAE 114.15 | RMSE 420.69 | LR 3.84e-06
+Epoch 78/100: Train Loss 0.4512 | Val Loss 2.2773 | MAE 114.21 | RMSE 421.41 | LR 3.53e-06
+Epoch 79/100: Train Loss 0.4585 | Val Loss 2.2744 | MAE 114.25 | RMSE 421.84 | LR 3.24e-06
+Epoch 80/100: Train Loss 0.4502 | Val Loss 2.2520 | MAE 114.41 | RMSE 421.24 | LR 2.96e-06
+Epoch 81/100: Train Loss 0.4616 | Val Loss 2.2480 | MAE 115.09 | RMSE 422.43 | LR 2.69e-06
+Epoch 82/100: Train Loss 0.4750 | Val Loss 2.2377 | MAE 115.35 | RMSE 422.93 | LR 2.43e-06
+Epoch 83/100: Train Loss 0.4584 | Val Loss 2.2404 | MAE 115.10 | RMSE 422.52 | LR 2.18e-06
+Epoch 84/100: Train Loss 0.4518 | Val Loss 2.2393 | MAE 115.30 | RMSE 422.79 | LR 1.95e-06
+Epoch 85/100: Train Loss 0.4450 | Val Loss 2.2352 | MAE 115.40 | RMSE 422.73 | LR 1.73e-06
+Epoch 86/100: Train Loss 0.4395 | Val Loss 2.2383 | MAE 115.55 | RMSE 422.83 | LR 1.52e-06
+Epoch 87/100: Train Loss 0.4320 | Val Loss 2.2382 | MAE 115.73 | RMSE 423.72 | LR 1.33e-06
+Epoch 88/100: Train Loss 0.4370 | Val Loss 2.2371 | MAE 115.79 | RMSE 423.44 | LR 1.15e-06
+Epoch 89/100: Train Loss 0.4355 | Val Loss 2.2430 | MAE 115.75 | RMSE 423.17 | LR 9.84e-07
+Epoch 90/100: Train Loss 0.4350 | Val Loss 2.2496 | MAE 115.54 | RMSE 422.89 | LR 8.32e-07
+Epoch 91/100: Train Loss 0.4288 | Val Loss 2.2516 | MAE 115.48 | RMSE 422.95 | LR 6.94e-07
+Epoch 92/100: Train Loss 0.4222 | Val Loss 2.2530 | MAE 115.37 | RMSE 422.95 | LR 5.70e-07
+Epoch 93/100: Train Loss 0.4183 | Val Loss 2.2505 | MAE 115.43 | RMSE 423.47 | LR 4.60e-07
+Epoch 94/100: Train Loss 0.4144 | Val Loss 2.2578 | MAE 115.26 | RMSE 423.22 | LR 3.65e-07
+Epoch 95/100: Train Loss 0.4088 | Val Loss 2.2583 | MAE 115.27 | RMSE 423.38 | LR 2.84e-07
+Epoch 96/100: Train Loss 0.4053 | Val Loss 2.2602 | MAE 115.20 | RMSE 423.32 | LR 2.18e-07
+Epoch 97/100: Train Loss 0.4021 | Val Loss 2.2610 | MAE 115.20 | RMSE 423.24 | LR 1.66e-07
+Epoch 98/100: Train Loss 0.3999 | Val Loss 2.2603 | MAE 115.21 | RMSE 423.16 | LR 1.30e-07
+Epoch 99/100: Train Loss 0.3988 | Val Loss 2.2583 | MAE 115.28 | RMSE 423.33 | LR 1.07e-07
+Epoch 100/100: Train Loss 0.3985 | Val Loss 2.2577 | MAE 115.32 | RMSE 423.41 | LR 1.00e-07
+Metrics plot saved to assets/training_metrics_e100_lr3e-05_ds2.png
+Training history saved to assets/training_history_e100_lr3e-05_ds2.json
+
+------------------------------------------------------------
+Sender: LSF System <lsfadmin@hpc.dtu.dk>
+Subject: Job 28298482: <Distill_CLIP> in cluster <dcc> Done
+
+Job <Distill_CLIP> was submitted from host <hpclogin1> by user <s253771> in cluster <dcc> at Mon Apr 27 08:51:35 2026
+Job was executed on host(s) <4*n-62-20-14>, in queue <gpuv100>, as user <s253771> in cluster <dcc> at Mon Apr 27 09:50:11 2026
+</zhome/3b/2/223841> was used as the home directory.
+</zhome/3b/2/223841/ADLCV/CLIP-EBC> was used as the working directory.
+Started at Mon Apr 27 09:50:11 2026
+Terminated at Mon Apr 27 16:32:18 2026
+Results reported at Mon Apr 27 16:32:18 2026
+
+Your job looked like:
+
+------------------------------------------------------------
+# LSBATCH: User input
+#!/bin/sh
+### ---------------- specify queue name ----------------
+#BSUB -q gpuv100
+#BSUB -gpu "num=1"
+### ---------------- specify job name ----------------
+#BSUB -J Distill_CLIP
+### ---------------- specify number of cores ----------------
+#BSUB -n 4
+#BSUB -R "span[hosts=1]"
+### ---------------- specify CPU memory requirements ----------------
+#BSUB -R "rusage[mem=20GB]"
+### ---------------- specify wall-clock time (max allowed is 12:00) ----------------
+#BSUB -W 12:00
+#BSUB -o logs/OUTPUT_FILE%J.out
+#BSUB -e logs/OUTPUT_FILE%J.err
+
+source ~/miniconda3/bin/activate clip_ebc
+cd "$LSB_SUBCWD"
+mkdir -p logs
+
+python train_distillation.py \
+    --model clip_vit_l_14 --input_size 224 --reduction 8 --truncation 4 \
+    --anchor_points average --prompt_type word --granularity fine \
+    --num_vpt 32 --vpt_drop 0.0 \
+    --weight_path ./checkpoints/nwpu/best_rmse_0.pth \
+    --device cuda --epochs 100 --lr 3e-5 --downscale 2 --batch_size 8
+
+------------------------------------------------------------
+
+Successfully completed.
+
+Resource usage summary:
+
+    CPU time :                                   65683.00 sec.
+    Max Memory :                                 3311 MB
+    Average Memory :                             2046.38 MB
+    Total Requested Memory :                     81920.00 MB
+    Delta Memory :                               78609.00 MB
+    Max Swap :                                   -
+    Max Processes :                              8
+    Max Threads :                                28
+    Run time :                                   24127 sec.
+    Turnaround time :                            27643 sec.
+
+The output (if any) is above this job summary.
+
+
+
+PS:
+
+Read file <logs/OUTPUT_FILE28298482.err> for stderr output of this job.
+

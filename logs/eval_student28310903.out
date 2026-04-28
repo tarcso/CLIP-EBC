@@ -1,0 +1,85 @@
+
+Loading teacher model...
+Missing keys: []
+Unexpected keys: ['proj']
+All keys matched successfully.
+Initialized model with text prompts: ['There is no person.', 'There is one person.', 'There are two people.', 'There are three people.', 'There are more than four people.']
+
+Loading student model...
+Missing keys: []
+Unexpected keys: ['proj']
+All keys matched successfully.
+Initialized model with text prompts: ['There is no person.', 'There is one person.', 'There are two people.', 'There are three people.', 'There are more than four people.']
+
+=======================================================
+Model                                    MAE       RMSE
+-------------------------------------------------------
+Teacher @ 1x (original)                34.49      79.71
+Teacher @ 2x (no training)             52.78     288.49
+Student @ 2x (distilled)              113.00     210.96
+=======================================================
+
+Results saved to: ./student_eval_outputs/e100_lr3e-5
+
+------------------------------------------------------------
+Sender: LSF System <lsfadmin@hpc.dtu.dk>
+Subject: Job 28310903: <Eval_Student> in cluster <dcc> Done
+
+Job <Eval_Student> was submitted from host <hpclogin1> by user <s253771> in cluster <dcc> at Tue Apr 28 11:18:49 2026
+Job was executed on host(s) <4*n-62-20-5>, in queue <gpuv100>, as user <s253771> in cluster <dcc> at Tue Apr 28 12:51:13 2026
+</zhome/3b/2/223841> was used as the home directory.
+</zhome/3b/2/223841/ADLCV/CLIP-EBC> was used as the working directory.
+Started at Tue Apr 28 12:51:13 2026
+Terminated at Tue Apr 28 13:21:35 2026
+Results reported at Tue Apr 28 13:21:35 2026
+
+Your job looked like:
+
+------------------------------------------------------------
+# LSBATCH: User input
+#!/bin/sh
+#BSUB -q gpuv100
+#BSUB -gpu "num=1"
+#BSUB -J Eval_Student
+#BSUB -n 4
+#BSUB -R "span[hosts=1]"
+#BSUB -R "rusage[mem=20GB]"
+#BSUB -W 02:00
+#BSUB -o logs/eval_student%J.out
+#BSUB -e logs/eval_student%J.err
+
+source ~/miniconda3/bin/activate clip_ebc
+cd "$LSB_SUBCWD"
+mkdir -p logs
+
+python eval_student.py \
+    --teacher_weight_path ./checkpoints/nwpu/best_rmse_0.pth \
+    --student_weight_path ./checkpoints/student/best_student_e100_lr3e-05_ds2.pth \
+    --downscale 2 --device cuda \
+    --save_dir ./student_eval_outputs/e100_lr3e-5
+
+------------------------------------------------------------
+
+Successfully completed.
+
+Resource usage summary:
+
+    CPU time :                                   1710.00 sec.
+    Max Memory :                                 3689 MB
+    Average Memory :                             1677.50 MB
+    Total Requested Memory :                     81920.00 MB
+    Delta Memory :                               78231.00 MB
+    Max Swap :                                   -
+    Max Processes :                              4
+    Max Threads :                                10
+    Run time :                                   1822 sec.
+    Turnaround time :                            7366 sec.
+
+The output (if any) is above this job summary.
+
+
+
+PS:
+
+Read file <logs/eval_student28310903.err> for stderr output of this job.
+

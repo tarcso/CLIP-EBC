@@ -1,0 +1,107 @@
+model          :	clip_vit_l_14
+input_size     :	224
+reduction      :	8
+regression     :	False
+truncation     :	4
+anchor_points  :	average
+prompt_type    :	word
+granularity    :	fine
+num_vpt        :	32
+vpt_drop       :	0.0
+shallow_vpt    :	False
+weight_path    :	./checkpoints/nwpu/best_rmse_0.pth
+epochs         :	10
+lr             :	1e-05
+downscale      :	2
+batch_size     :	8
+device         :	cuda
+Missing keys: []
+Unexpected keys: ['proj']
+All keys matched successfully.
+Initialized model with text prompts: ['There is no person.', 'There is one person.', 'There are two people.', 'There are three people.', 'There are more than four people.']
+Epoch 1/10: Train Loss 3.2448 | Val Loss 2.8202 | MAE 125.34 | RMSE 490.76 | LR 9.76e-06
+  -> Saved best student (MAE 125.34)
+Epoch 2/10: Train Loss 2.8340 | Val Loss 2.7545 | MAE 122.55 | RMSE 477.72 | LR 9.05e-06
+  -> Saved best student (MAE 122.55)
+Epoch 3/10: Train Loss 2.6512 | Val Loss 2.7240 | MAE 120.96 | RMSE 473.07 | LR 7.96e-06
+  -> Saved best student (MAE 120.96)
+Epoch 4/10: Train Loss 2.5453 | Val Loss 2.6869 | MAE 120.55 | RMSE 470.77 | LR 6.58e-06
+  -> Saved best student (MAE 120.55)
+Epoch 5/10: Train Loss 2.4637 | Val Loss 2.6600 | MAE 120.70 | RMSE 469.92 | LR 5.05e-06
+Epoch 6/10: Train Loss 2.3994 | Val Loss 2.6347 | MAE 120.91 | RMSE 469.60 | LR 3.52e-06
+Epoch 7/10: Train Loss 2.3522 | Val Loss 2.6242 | MAE 120.50 | RMSE 468.55 | LR 2.14e-06
+  -> Saved best student (MAE 120.50)
+Epoch 8/10: Train Loss 2.3170 | Val Loss 2.6198 | MAE 120.40 | RMSE 468.09 | LR 1.05e-06
+  -> Saved best student (MAE 120.40)
+Epoch 9/10: Train Loss 2.2954 | Val Loss 2.6112 | MAE 120.63 | RMSE 468.24 | LR 3.42e-07
+Epoch 10/10: Train Loss 2.2820 | Val Loss 2.6029 | MAE 121.03 | RMSE 468.63 | LR 1.00e-07
+Metrics plot saved to assets/training_metrics.png
+
+------------------------------------------------------------
+Sender: LSF System <lsfadmin@hpc.dtu.dk>
+Subject: Job 28297372: <Distill_CLIP> in cluster <dcc> Done
+
+Job <Distill_CLIP> was submitted from host <hpclogin1> by user <s253771> in cluster <dcc> at Sun Apr 26 20:53:23 2026
+Job was executed on host(s) <4*n-62-20-11>, in queue <gpuv100>, as user <s253771> in cluster <dcc> at Sun Apr 26 20:53:46 2026
+</zhome/3b/2/223841> was used as the home directory.
+</zhome/3b/2/223841/ADLCV/CLIP-EBC> was used as the working directory.
+Started at Sun Apr 26 20:53:46 2026
+Terminated at Sun Apr 26 21:33:42 2026
+Results reported at Sun Apr 26 21:33:42 2026
+
+Your job looked like:
+
+------------------------------------------------------------
+# LSBATCH: User input
+#!/bin/sh
+### ---------------- specify queue name ----------------
+#BSUB -q gpuv100
+#BSUB -gpu "num=1"
+### ---------------- specify job name ----------------
+#BSUB -J Distill_CLIP
+### ---------------- specify number of cores ----------------
+#BSUB -n 4
+#BSUB -R "span[hosts=1]"
+### ---------------- specify CPU memory requirements ----------------
+#BSUB -R "rusage[mem=20GB]"
+### ---------------- specify wall-clock time (max allowed is 12:00) ----------------
+#BSUB -W 12:00
+#BSUB -o logs/OUTPUT_FILE%J.out
+#BSUB -e logs/OUTPUT_FILE%J.err
+
+source ~/miniconda3/bin/activate clip_ebc
+cd "$LSB_SUBCWD"
+mkdir -p logs
+
+python train_distillation.py \
+    --model clip_vit_l_14 --input_size 224 --reduction 8 --truncation 4 \
+    --anchor_points average --prompt_type word --granularity fine \
+    --num_vpt 32 --vpt_drop 0.0 \
+    --weight_path ./checkpoints/nwpu/best_rmse_0.pth \
+    --device cuda --epochs 10 --lr 1e-5 --downscale 2 --batch_size 8
+
+------------------------------------------------------------
+
+Successfully completed.
+
+Resource usage summary:
+
+    CPU time :                                   6621.00 sec.
+    Max Memory :                                 3409 MB
+    Average Memory :                             2000.95 MB
+    Total Requested Memory :                     81920.00 MB
+    Delta Memory :                               78511.00 MB
+    Max Swap :                                   -
+    Max Processes :                              8
+    Max Threads :                                77
+    Run time :                                   2396 sec.
+    Turnaround time :                            2419 sec.
+
+The output (if any) is above this job summary.
+
+
+
+PS:
+
+Read file <logs/OUTPUT_FILE28297372.err> for stderr output of this job.
+
