@@ -35,9 +35,9 @@ Based on the paper [*CLIP-EBC: CLIP Can Count Accurately through Enhanced Blockw
 | Teacher @ 1× (upper bound) | 34.49 | 79.71 |
 | Teacher @ 2× (baseline to beat) | 52.78 | 288.49 |
 | Student @ 2× (50 epochs, lr=1e-5) | 102.65 | 230.52 |
-| Student @ 2× (100 epochs, lr=3e-5) | TBD | TBD |
+| Student @ 2× (100 epochs, lr=3e-5) | 113.00 | 210.96 |
 
-> The student starts from the teacher's pretrained weights and is fine-tuned on 2× downscaled images using the teacher's density maps as pseudo-labels (no extra annotations needed). RMSE already improved significantly (288→230), showing distillation reduces the worst-case failures on large crowds.
+> The student starts from the teacher's pretrained weights and is fine-tuned on 2× downscaled images using the teacher's density maps as pseudo-labels (no extra annotations needed). RMSE improved significantly across both runs (288→210), showing distillation reduces worst-case failures on dense crowds. The 50-epoch run gives better MAE; the 100-epoch run overfit after epoch 44 but achieved the lowest RMSE.
 
 ---
 

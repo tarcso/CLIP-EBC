@@ -15,6 +15,6 @@ mkdir -p logs
 
 python eval_student.py \
     --teacher_weight_path ./checkpoints/nwpu/best_rmse_0.pth \
-    --student_weight_path ./checkpoints/student/best_student_e100_lr3e-5_ds2.pth \
+    --student_weight_path ./checkpoints/student/best_student_e100_lr3e-05_ds2.pth \
     --downscale 2 --device cuda \
     --save_dir ./student_eval_outputs/e100_lr3e-5
