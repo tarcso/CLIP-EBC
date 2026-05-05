@@ -1,0 +1,4 @@
+model,mae,rmse
+Teacher @ 1x (original),34.48878,79.71235849101441
+Teacher @ 4x (no training),109.08888,566.587603904639
+Student @ 4x (distilled),95.7282,339.86677775387227
