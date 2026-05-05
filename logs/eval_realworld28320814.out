@@ -1,0 +1,89 @@
+Loading teacher...
+Missing keys: []
+Unexpected keys: ['proj']
+All keys matched successfully.
+Initialized model with text prompts: ['There is no person.', 'There is one person.', 'There are two people.', 'There are three people.', 'There are more than four people.']
+Loading student 2x...
+Missing keys: []
+Unexpected keys: ['proj']
+All keys matched successfully.
+Initialized model with text prompts: ['There is no person.', 'There is one person.', 'There are two people.', 'There are three people.', 'There are more than four people.']
+Loading student 4x...
+Missing keys: []
+Unexpected keys: ['proj']
+All keys matched successfully.
+Initialized model with text prompts: ['There is no person.', 'There is one person.', 'There are two people.', 'There are three people.', 'There are more than four people.']
+Folder   0 (zoom 2.2x): teacher_hr=91  teacher_lr=90  student_2x=123  student_4x=130
+Folder   1 (zoom 2.0x): teacher_hr=127  teacher_lr=104  student_2x=177  student_4x=198
+Folder   2 (zoom 3.0x): teacher_hr=127  teacher_lr=132  student_2x=208  student_4x=232
+Folder   3 (zoom 2.6x): teacher_hr=597  teacher_lr=594  student_2x=772  student_4x=927
+Folder   4 (zoom 2.3x): teacher_hr=853  teacher_lr=732  student_2x=1138  student_4x=1267
+Folder   5 (zoom 2.1x): teacher_hr=190  teacher_lr=216  student_2x=365  student_4x=468
+Folder   6 (zoom 1.9x): teacher_hr=493  teacher_lr=218  student_2x=473  student_4x=707
+Folder   7 (zoom 2.2x): teacher_hr=430  teacher_lr=327  student_2x=581  student_4x=782
+
+------------------------------------------------------------
+Sender: LSF System <lsfadmin@hpc.dtu.dk>
+Subject: Job 28320814: <Eval_Realworld> in cluster <dcc> Exited
+
+Job <Eval_Realworld> was submitted from host <n-62-30-4> by user <s253771> in cluster <dcc> at Tue Apr 28 23:36:50 2026
+Job was executed on host(s) <4*n-62-20-3>, in queue <gpuv100>, as user <s253771> in cluster <dcc> at Wed Apr 29 02:08:17 2026
+</zhome/3b/2/223841> was used as the home directory.
+</zhome/3b/2/223841/ADLCV/CLIP-EBC> was used as the working directory.
+Started at Wed Apr 29 02:08:17 2026
+Terminated at Wed Apr 29 02:16:44 2026
+Results reported at Wed Apr 29 02:16:44 2026
+
+Your job looked like:
+
+------------------------------------------------------------
+# LSBATCH: User input
+#!/bin/sh
+#BSUB -q gpuv100
+#BSUB -gpu "num=1"
+#BSUB -J Eval_Realworld
+#BSUB -n 4
+#BSUB -R "span[hosts=1]"
+#BSUB -R "rusage[mem=20GB]"
+#BSUB -W 02:00
+#BSUB -o logs/eval_realworld%J.out
+#BSUB -e logs/eval_realworld%J.err
+
+source ~/miniconda3/bin/activate clip_ebc
+cd "$LSB_SUBCWD"
+mkdir -p logs
+
+python eval_realworld.py \
+    --teacher_weight_path ./checkpoints/nwpu/best_rmse_0.pth \
+    --student_2x_weight_path ./checkpoints/student/best_student_e50_lr1e-5.pth \
+    --student_4x_weight_path ./checkpoints/student/best_student_e50_lr3e-05_ds4.pth \
+    --data_root /dtu/blackhole/02/137570/MultiRes/test \
+    --save_dir ./realworld_outputs \
+    --device cuda \
+    --visualize_folders 60
+
+------------------------------------------------------------
+
+Exited with exit code 1.
+
+Resource usage summary:
+
+    CPU time :                                   89.00 sec.
+    Max Memory :                                 3378 MB
+    Average Memory :                             1993.00 MB
+    Total Requested Memory :                     81920.00 MB
+    Delta Memory :                               78542.00 MB
+    Max Swap :                                   -
+    Max Processes :                              4
+    Max Threads :                                9
+    Run time :                                   507 sec.
+    Turnaround time :                            9594 sec.
+
+The output (if any) is above this job summary.
+
+
+
+PS:
+
+Read file <logs/eval_realworld28320814.err> for stderr output of this job.
+

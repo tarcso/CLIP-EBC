@@ -9,7 +9,8 @@ This is a fork of the official [CLIP-EBC](https://github.com/Yiming-M/CLIP-EBC) 
 
 - **Task 3** — baseline evaluation of CLIP-EBC (ViT-L/14) on the NWPU-Crowd validation set
 - **Task 4** — downscaling study: evaluating the model at 1×, 2×, and 4× resolution reduction
-- **Task 5** — teacher/student knowledge distillation: training a student model on 2× downscaled images using the teacher's density maps as pseudo-labels
+- **Task 5** — teacher/student knowledge distillation: training student models on 2× and 4× downscaled images
+- **Task 6** — real-world evaluation on zoom in/out image pairs (including king's crowning photos)
 - Bug fixes to `utils/eval_utils.py` for robust sliding window prediction on small/downscaled images
 
 Based on the paper [*CLIP-EBC: CLIP Can Count Accurately through Enhanced Blockwise Classification*](https://arxiv.org/abs/2403.09281v1).
@@ -28,7 +29,7 @@ Based on the paper [*CLIP-EBC: CLIP Can Count Accurately through Enhanced Blockw
 
 > Only the input images are downscaled at inference time. Ground truth counts remain unchanged.
 
-### Knowledge distillation (Task 5) — student model at 2× downscale
+### Knowledge distillation (Task 5) — 2× downscale
 
 | **Model** | **MAE** | **RMSE** |
 |-----------|---------|----------|
@@ -38,6 +39,70 @@ Based on the paper [*CLIP-EBC: CLIP Can Count Accurately through Enhanced Blockw
 | Student @ 2× (100 epochs, lr=3e-5) | 113.00 | 210.96 |
 
 > The student starts from the teacher's pretrained weights and is fine-tuned on 2× downscaled images using the teacher's density maps as pseudo-labels (no extra annotations needed). RMSE improved significantly across both runs (288→210), showing distillation reduces worst-case failures on dense crowds. The 50-epoch run gives better MAE; the 100-epoch run overfit after epoch 44 but achieved the lowest RMSE.
+
+### Knowledge distillation (Task 5) — 4× downscale
+
+| **Model** | **MAE** | **RMSE** |
+|-----------|---------|----------|
+| Teacher @ 1× (upper bound) | 34.49 | 79.71 |
+| Teacher @ 4× (baseline to beat) | 109.09 | 566.58 |
+| **Student @ 4× (50 epochs, lr=3e-5)** | **95.73** | **339.87** |
+
+> The student outperforms the teacher at 4× downscale on both MAE and RMSE — the only case where distillation fully closes the gap.
+
+### Knowledge distillation — partial backbone unfreezing
+
+Same setup as 2× distillation but the last 3 CLIP transformer blocks are unfrozen with a lower LR (1e-6) to allow the backbone to adapt to low-resolution inputs. Trained with `train_distillation_unfreeze.py`.
+
+| **Model** | **MAE** | **RMSE** |
+|-----------|---------|----------|
+| Student @ 2× frozen backbone (50 ep, lr=1e-5) | 102.65 | 230.52 |
+| Student @ 2× unfrozen last 3 blocks (50 ep, lr=3e-5, backbone lr=1e-6) | 117.72 | 219.67 |
+
+> Unfreezing the last 3 transformer blocks improved RMSE further (219 vs 230) but hurt MAE. The backbone adaptation reduces catastrophic errors but introduces more average error — the model becomes more conservative at low resolution.
+
+### Super-resolution as an alternative approach
+
+An alternative to distillation is to use a super-resolution (SR) model as a preprocessing step: upscale the low-resolution image back to its original resolution before feeding it to the teacher. This requires no retraining of the counting model.
+
+We compare two SR methods:
+- **Bicubic** — classical interpolation, no learning, trivially fast
+- **Real-ESRGAN** ([Wang et al., 2021](https://github.com/xinntao/Real-ESRGAN)) — a deep generative SR model trained to produce perceptually sharp images. Uses a residual-in-residual dense block (RRDB) architecture. We use the 4× upscaling variant.
+
+The key question: does SR preprocessing outperform distillation, and is a learned SR model better than simple bicubic interpolation?
+
+> Download the ESRGAN weights before running:
+> ```bash
+> mkdir -p weights
+> wget -O weights/RealESRGAN_x4plus.pth \
+>     https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth
+> ```
+>
+> Then run:
+> ```bash
+> bsub < eval_sr.sh
+> ```
+
+| **Method** | **MAE** | **RMSE** |
+|-----------|---------|----------|
+| Teacher @ 1× original | 34.49 | 79.71 |
+| Teacher @ 2× downscaled (no recovery) | 52.78 | 288.49 |
+| Teacher @ bicubic SR (2×→1×) | 45.55 | 168.94 |
+| Teacher @ Real-ESRGAN (2×→1×) | 53.74 | 236.08 |
+| Student @ 2× distilled (ours) | 102.65 | 230.52 |
+
+> **Finding:** Bicubic SR is surprisingly the strongest approach at 2× — it outperforms Real-ESRGAN, the degraded baseline, and the distilled student on both MAE and RMSE. Real-ESRGAN introduces sharpening artefacts (hallucinated textures) that confuse the counting model and give no benefit over the degraded input. Distillation's advantage over SR is inference simplicity: no separate preprocessing step is needed at test time, and it scales better to more extreme zoom ratios (see 4× results above).
+
+### Real-world evaluation (Task 6) — zoom in/out pairs
+
+61 image pairs with varying zoom ratios (~1.2× to ~7.5×). No ground truth — predictions only.
+
+| **Folder** | **Zoom ratio** | **Teacher HR** | **Teacher LR** | **Student 2× LR** | **Student 4× LR** |
+|-----------|---------------|---------------|---------------|------------------|------------------|
+| 60 (king's crowning) | ~7.5× | 8204 | 4442 | 3584 | 1878 |
+| Average (all 61 pairs) | ~2–4× | 545 | 373 | 571 | 581 |
+
+> Real-world images from `/dtu/blackhole/02/137570/MultiRes/test`. Each folder contains one HR and one LR image of the same scene taken at different focal lengths. No ground truth — predictions only. The king's crowning (folder 60) has a 7.5× zoom ratio, well outside the 2×/4× training distribution of the students, which explains the large undercounting. At moderate zoom ratios (2–4×), the teacher@LR and students give comparable predictions.
 
 ---
 
@@ -101,19 +166,27 @@ data/nwpu/
 > rm -rf data/nwpu/test
 > ```
 
-### 5. Download the checkpoint
+### 5. Download the checkpoints
 
-Download the pretrained ViT-L/14 RMSE model from the [releases page](https://github.com/Yiming-M/CLIP-EBC/releases):
+**Teacher (pretrained CLIP-EBC ViT-L/14):** download from the [releases page](https://github.com/Yiming-M/CLIP-EBC/releases):
 
 ```bash
 wget https://github.com/Yiming-M/CLIP-EBC/releases/download/v1.0.0/NWPU_CLIP_ViT_B_16_Word_rmse.tgz
 tar -xzf NWPU_CLIP_ViT_B_16_Word_rmse.tgz.tar.gz
 ```
 
-The checkpoint should end up at:
+The checkpoint should end up at `checkpoints/nwpu/best_rmse_0.pth`.
 
+**Student (distilled):** available on HuggingFace at [dimos-stavaris/clip-ebc-student-teacher](https://huggingface.co/dimos-stavaris/clip-ebc-student-teacher):
+
+```bash
+hf download dimos-stavaris/clip-ebc-student-teacher best_student_e50_lr1e-5.pth --local-dir checkpoints/student/
 ```
-checkpoints/nwpu/best_rmse_0.pth
+
+Or in Python:
+```python
+from huggingface_hub import hf_hub_download
+hf_hub_download(repo_id="dimos-stavaris/clip-ebc-student-teacher", filename="best_student_e50_lr1e-5.pth", local_dir="checkpoints/student/")
 ```
 
 ---
@@ -185,9 +258,17 @@ bsub < train_student.sh
 
 The student is trained with:
 - Teacher frozen, providing density map pseudo-labels at 448×448
-- Student fine-tuned on the same crops downscaled to 224×224
+- Student fine-tuned on the same crops downscaled (2× → 224×224, 4× → 112×112)
 - Loss: MSE on density maps + 0.1× L1 on total count
-- Optimizer: AdamW, lr=3e-5, cosine LR decay, 100 epochs
+- Optimizer: AdamW, lr=3e-5, cosine LR decay, 50 epochs
+
+Change `--downscale 2` to `--downscale 4` in `train_student.sh` for the 4× experiment.
+
+To train with partial backbone unfreezing (last 3 CLIP transformer blocks, differential LR):
+
+```bash
+bsub < train_student_unfreeze.sh
+```
 
 Evaluate student vs teacher on full val images:
 
@@ -195,7 +276,23 @@ Evaluate student vs teacher on full val images:
 bsub < eval_student.sh
 ```
 
-Results are saved to `student_eval_outputs/`.
+Results are saved to `student_eval_outputs/` (tagged by epochs, lr, and downscale factor).
+
+### SR comparison
+
+```bash
+bsub < eval_sr.sh
+```
+
+Runs teacher + bicubic SR + Real-ESRGAN SR + student on NWPU val. Results saved to `sr_eval_outputs/`. Requires ESRGAN weights (see SR section above).
+
+### Task 6 — Real-world evaluation
+
+```bash
+bsub < eval_realworld.sh
+```
+
+Runs teacher and both students on all 61 zoom in/out pairs in `/dtu/blackhole/02/137570/MultiRes/test`. Results and visualizations saved to `realworld_outputs/`.
 
 ---
 

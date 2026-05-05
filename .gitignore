@@ -1,9 +1,7 @@
 # Data
 checkpoints/
 data/
-
-# LSF job logs
-logs/
+weights/
 
 # CLIP weights and configs
 models/clip/_clip/configs/*

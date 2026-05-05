@@ -1,0 +1,75 @@
+
+Loading teacher model...
+Missing keys: []
+Unexpected keys: ['proj']
+All keys matched successfully.
+Initialized model with text prompts: ['There is no person.', 'There is one person.', 'There are two people.', 'There are three people.', 'There are more than four people.']
+
+Loading student model...
+Missing keys: []
+Unexpected keys: ['proj']
+All keys matched successfully.
+Initialized model with text prompts: ['There is no person.', 'There is one person.', 'There are two people.', 'There are three people.', 'There are more than four people.']
+
+------------------------------------------------------------
+Sender: LSF System <lsfadmin@hpc.dtu.dk>
+Subject: Job 28307984: <Eval_Student> in cluster <dcc> Exited
+
+Job <Eval_Student> was submitted from host <hpclogin1> by user <s253771> in cluster <dcc> at Mon Apr 27 21:43:46 2026
+Job was executed on host(s) <4*n-62-20-11>, in queue <gpuv100>, as user <s253771> in cluster <dcc> at Tue Apr 28 00:07:27 2026
+</zhome/3b/2/223841> was used as the home directory.
+</zhome/3b/2/223841/ADLCV/CLIP-EBC> was used as the working directory.
+Started at Tue Apr 28 00:07:27 2026
+Terminated at Tue Apr 28 00:28:53 2026
+Results reported at Tue Apr 28 00:28:53 2026
+
+Your job looked like:
+
+------------------------------------------------------------
+# LSBATCH: User input
+#!/bin/sh
+#BSUB -q gpuv100
+#BSUB -gpu "num=1"
+#BSUB -J Eval_Student
+#BSUB -n 4
+#BSUB -R "span[hosts=1]"
+#BSUB -R "rusage[mem=20GB]"
+#BSUB -W 02:00
+#BSUB -o logs/eval_student%J.out
+#BSUB -e logs/eval_student%J.err
+
+source ~/miniconda3/bin/activate clip_ebc
+cd "$LSB_SUBCWD"
+mkdir -p logs
+
+python eval_student.py \
+    --teacher_weight_path ./checkpoints/nwpu/best_rmse_0.pth \
+    --student_weight_path ./checkpoints/student/best_student_e100_lr3e-5_ds2.pth \
+    --downscale 2 --device cuda \
+    --save_dir ./student_eval_outputs/e100_lr3e-5
+
+------------------------------------------------------------
+
+Exited with exit code 1.
+
+Resource usage summary:
+
+    CPU time :                                   1314.00 sec.
+    Max Memory :                                 1507 MB
+    Average Memory :                             1295.64 MB
+    Total Requested Memory :                     81920.00 MB
+    Delta Memory :                               80413.00 MB
+    Max Swap :                                   -
+    Max Processes :                              4
+    Max Threads :                                10
+    Run time :                                   1286 sec.
+    Turnaround time :                            9907 sec.
+
+The output (if any) is above this job summary.
+
+
+
+PS:
+
+Read file <logs/eval_student28307984.err> for stderr output of this job.
+

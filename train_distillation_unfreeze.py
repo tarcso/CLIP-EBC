@@ -1,3 +1,11 @@
+"""
+Distillation with partial backbone unfreezing.
+
+Identical to train_distillation.py except the student's last N transformer
+blocks are unfrozen and trained with a lower LR (backbone_lr) than the rest
+of the trainable params (lr). This lets the backbone adapt to low-resolution
+inputs without destroying the pretrained CLIP features.
+"""
 import torch
 from torch import nn
 from torch.optim import Optimizer
@@ -24,12 +32,6 @@ current_dir = os.path.abspath(os.path.dirname(__file__))
 
 
 def distillation_loss(student_pred, teacher_label):
-    """MSE on density map values + L1 on total count.
-
-    MSE preserves absolute scale so the student learns both where the crowd is
-    and how many people are there, without the softmax normalisation destroying
-    count information.  The count term provides an explicit second-order signal.
-    """
     if isinstance(student_pred, (list, tuple)):
         student_pred = student_pred[0]
     if isinstance(teacher_label, (list, tuple)):
@@ -41,8 +43,6 @@ def distillation_loss(student_pred, teacher_label):
         teacher_label = teacher_label.unsqueeze(1)
 
     if teacher_label.shape[2:] != student_pred.shape[2:]:
-        # mode="area" averages pixels when downsampling, which divides the density sum by the
-        # spatial ratio (e.g. 56x56->28x28 gives sum/4). Multiply back to preserve total count.
         spatial_ratio = (teacher_label.shape[2] * teacher_label.shape[3]) / (
             student_pred.shape[2] * student_pred.shape[3]
         )
@@ -54,6 +54,39 @@ def distillation_loss(student_pred, teacher_label):
         teacher_label.sum(dim=(1, 2, 3)),
     )
     return density_loss + 0.1 * count_loss
+
+
+def unfreeze_last_blocks(student, n_unfreeze):
+    """Unfreeze the last n_unfreeze transformer blocks of the CLIP image encoder."""
+    blocks = student.image_encoder.transformer.resblocks
+    total = len(blocks)
+    for i, block in enumerate(blocks):
+        if i >= total - n_unfreeze:
+            for param in block.parameters():
+                param.requires_grad = True
+    unfrozen = sum(p.numel() for p in student.parameters() if p.requires_grad)
+    print(f"Unfroze last {n_unfreeze}/{total} transformer blocks — {unfrozen/1e6:.1f}M trainable params")
+
+
+def build_optimizer(student, lr, backbone_lr, n_unfreeze):
+    """Differential LR: backbone blocks at backbone_lr, everything else at lr."""
+    blocks = student.image_encoder.transformer.resblocks
+    total = len(blocks)
+    backbone_param_ids = set()
+    for block in blocks[total - n_unfreeze:]:
+        for p in block.parameters():
+            backbone_param_ids.add(id(p))
+
+    backbone_params = [p for p in student.parameters() if id(p) in backbone_param_ids]
+    other_params = [p for p in student.parameters() if p.requires_grad and id(p) not in backbone_param_ids]
+
+    print(f"Backbone params (lr={backbone_lr:.0e}): {sum(p.numel() for p in backbone_params)/1e6:.1f}M")
+    print(f"Head/VPT params (lr={lr:.0e}):      {sum(p.numel() for p in other_params)/1e6:.1f}M")
+
+    return torch.optim.AdamW([
+        {"params": backbone_params, "lr": backbone_lr},
+        {"params": other_params, "lr": lr},
+    ], weight_decay=1e-4)
 
 
 def train_distilation(
@@ -72,7 +105,6 @@ def train_distilation(
     teacher.eval()
 
     scaler = GradScaler()
-
     history = {"train_loss": [], "val_loss": [], "val_mae": [], "val_rmse": []}
     best_mae = float("inf")
 
@@ -88,14 +120,11 @@ def train_distilation(
             with torch.no_grad():
                 with autocast():
                     teacher_out = teacher(teacher_data)
-                    # teacher is in eval() → returns exp tensor directly (no tuple)
                     pseudo_labels = teacher_out[0] if isinstance(teacher_out, tuple) else teacher_out
 
             optimizer.zero_grad()
             with autocast():
                 student_out = student(student_data)
-                # student is in train() → returns (logits, exp); use exp (index 1) for distillation,
-                # not logits (index 0) which has 5 channels and would mismatch teacher's 1-channel exp
                 pred = student_out[1] if isinstance(student_out, tuple) else student_out
                 loss = loss_fn(pred, pseudo_labels)
 
@@ -112,8 +141,6 @@ def train_distilation(
         avg_train_loss = epoch_loss / len(train_dataloader)
         history["train_loss"].append(avg_train_loss)
 
-        # Validation — fixed seed so random crops are identical across epochs,
-        # making MAE/RMSE comparable run-to-run.
         torch.manual_seed(42)
         student.eval()
         val_loss = 0.0
@@ -127,7 +154,6 @@ def train_distilation(
 
                 with autocast():
                     teacher_out = teacher(teacher_data)
-                    # both are in eval() → return exp tensor directly (no tuple)
                     teacher_exp = teacher_out[0] if isinstance(teacher_out, tuple) else teacher_out
 
                     student_out = student(student_data)
@@ -200,7 +226,6 @@ def train_distilation(
         json.dump(history, f, indent=2)
     print(f"Training history saved to {history_path}")
 
-    # Upload best checkpoint to HuggingFace
     best_ckpt = f"checkpoints/student/best_student{run_tag}.pth"
     if HF_AVAILABLE and os.path.exists(best_ckpt):
         try:
@@ -219,20 +244,17 @@ def train_distilation(
 def build_model_and_bins(args):
     _ = get_config(vars(args).copy(), mute=False)
 
-    if args.regression:
-        bins, anchor_points = None, None
-    else:
-        with open(os.path.join(current_dir, "configs", f"reduction_{args.reduction}.json"), "r") as f:
-            config = json.load(f)[str(args.truncation)]["nwpu"]
+    with open(os.path.join(current_dir, "configs", f"reduction_{args.reduction}.json"), "r") as f:
+        config = json.load(f)[str(args.truncation)]["nwpu"]
 
-        bins = config["bins"][args.granularity]
-        anchor_points = (
-            config["anchor_points"][args.granularity]["average"]
-            if args.anchor_points == "average"
-            else config["anchor_points"][args.granularity]["middle"]
-        )
-        bins = [(float(b[0]), float(b[1])) for b in bins]
-        anchor_points = [float(p) for p in anchor_points]
+    bins = config["bins"][args.granularity]
+    anchor_points = (
+        config["anchor_points"][args.granularity]["average"]
+        if args.anchor_points == "average"
+        else config["anchor_points"][args.granularity]["middle"]
+    )
+    bins = [(float(b[0]), float(b[1])) for b in bins]
+    anchor_points = [float(p) for p in anchor_points]
 
     model = get_model(
         backbone=args.model,
@@ -253,25 +275,25 @@ def build_model_and_bins(args):
 
 
 if __name__ == "__main__":
-    parser = ArgumentParser(description="Train Student model via knowledge distillation.")
+    parser = ArgumentParser()
 
-    # Model args
     parser.add_argument("--model", type=str, default="clip_vit_l_14")
     parser.add_argument("--input_size", type=int, default=224)
     parser.add_argument("--reduction", type=int, default=8, choices=[8, 16, 32])
     parser.add_argument("--regression", action="store_true")
     parser.add_argument("--truncation", type=int, default=4)
-    parser.add_argument("--anchor_points", type=str, default="average", choices=["average", "middle"])
-    parser.add_argument("--prompt_type", type=str, default="word", choices=["word", "number"])
-    parser.add_argument("--granularity", type=str, default="fine", choices=["fine", "dynamic", "coarse"])
+    parser.add_argument("--anchor_points", type=str, default="average")
+    parser.add_argument("--prompt_type", type=str, default="word")
+    parser.add_argument("--granularity", type=str, default="fine")
     parser.add_argument("--num_vpt", type=int, default=32)
     parser.add_argument("--vpt_drop", type=float, default=0.0)
     parser.add_argument("--shallow_vpt", action="store_true")
     parser.add_argument("--weight_path", type=str, required=True)
 
-    # Train args
     parser.add_argument("--epochs", type=int, default=50)
-    parser.add_argument("--lr", type=float, default=1e-5)
+    parser.add_argument("--lr", type=float, default=3e-5)
+    parser.add_argument("--backbone_lr", type=float, default=1e-6)
+    parser.add_argument("--n_unfreeze", type=int, default=3)
     parser.add_argument("--downscale", type=int, default=2, choices=[2, 4])
     parser.add_argument("--batch_size", type=int, default=8)
     parser.add_argument("--device", type=str, default="cpu", choices=["cpu", "cuda", "mps"])
@@ -280,44 +302,20 @@ if __name__ == "__main__":
     args.model = args.model.lower()
     device = torch.device(args.device)
 
-    train_data = Crowd_distilation(
-        dataset="nwpu",
-        split="train",
-        sigma=4.0,
-        return_filename=False,
-        downscale=args.downscale,
-    )
-    val_data = Crowd_distilation(
-        dataset="nwpu",
-        split="val",
-        sigma=4.0,
-        return_filename=False,
-        downscale=args.downscale,
-    )
+    train_data = Crowd_distilation(dataset="nwpu", split="train", sigma=4.0, return_filename=False, downscale=args.downscale)
+    val_data   = Crowd_distilation(dataset="nwpu", split="val",   sigma=4.0, return_filename=False, downscale=args.downscale)
 
-    train_loader = DataLoader(
-        train_data,
-        batch_size=args.batch_size,
-        shuffle=True,
-        num_workers=4,
-        pin_memory=True,
-        drop_last=True,
-    )
-    val_loader = DataLoader(
-        val_data,
-        batch_size=args.batch_size,
-        shuffle=False,
-        num_workers=0,  # must be 0 so torch.manual_seed(42) before val controls crop randomness
-        pin_memory=True,
-    )
+    train_loader = DataLoader(train_data, batch_size=args.batch_size, shuffle=True,  num_workers=4, pin_memory=True, drop_last=True)
+    val_loader   = DataLoader(val_data,   batch_size=args.batch_size, shuffle=False, num_workers=0, pin_memory=True)
 
     teacher = build_model_and_bins(args).to(device)
     student = copy.deepcopy(teacher)
 
-    optimizer = torch.optim.AdamW(student.parameters(), lr=args.lr, weight_decay=1e-4)
+    unfreeze_last_blocks(student, args.n_unfreeze)
+    optimizer = build_optimizer(student, args.lr, args.backbone_lr, args.n_unfreeze)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs, eta_min=1e-7)
 
-    run_tag = f"_e{args.epochs}_lr{args.lr:.0e}_ds{args.downscale}"
+    run_tag = f"_e{args.epochs}_lr{args.lr:.0e}_blr{args.backbone_lr:.0e}_uf{args.n_unfreeze}_ds{args.downscale}"
     train_distilation(
         teacher, student, train_loader, val_loader,
         optimizer, scheduler, distillation_loss, args.epochs, device,
