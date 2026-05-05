@@ -1,0 +1,52 @@
+Traceback (most recent call last):
+  File "/zhome/3b/2/223841/ADLCV/CLIP-EBC/eval_realworld.py", line 204, in <module>
+    main(args)
+  File "/zhome/3b/2/223841/ADLCV/CLIP-EBC/eval_realworld.py", line 137, in main
+    t_hr  = predict(teacher,    hr_tensor, window_size, stride, device)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/zhome/3b/2/223841/ADLCV/CLIP-EBC/eval_realworld.py", line 57, in predict
+    density = sliding_window_predict(model, image, window_size, stride)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/zhome/3b/2/223841/ADLCV/CLIP-EBC/utils/eval_utils.py", line 83, in sliding_window_predict
+    preds = model(windows)
+            ^^^^^^^^^^^^^^
+  File "/zhome/3b/2/223841/miniconda3/envs/clip_ebc/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1511, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/zhome/3b/2/223841/miniconda3/envs/clip_ebc/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1520, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/zhome/3b/2/223841/ADLCV/CLIP-EBC/models/clip/model.py", line 194, in forward
+    x = self.image_encoder(x) if self.backbone in resnet_backbones else self._forward_vpt(x)
+                                                                        ^^^^^^^^^^^^^^^^^^^^
+  File "/zhome/3b/2/223841/ADLCV/CLIP-EBC/models/clip/model.py", line 171, in _forward_vpt
+    image_features = self.image_encoder.transformer.resblocks[idx](image_features)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/zhome/3b/2/223841/miniconda3/envs/clip_ebc/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1511, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/zhome/3b/2/223841/miniconda3/envs/clip_ebc/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1520, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/zhome/3b/2/223841/ADLCV/CLIP-EBC/models/clip/_clip/blocks.py", line 41, in forward
+    x = x + self.mlp(self.ln_2(x))
+            ^^^^^^^^^^^^^^^^^^^^^^
+  File "/zhome/3b/2/223841/miniconda3/envs/clip_ebc/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1511, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/zhome/3b/2/223841/miniconda3/envs/clip_ebc/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1520, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/zhome/3b/2/223841/miniconda3/envs/clip_ebc/lib/python3.12/site-packages/torch/nn/modules/container.py", line 217, in forward
+    input = module(input)
+            ^^^^^^^^^^^^^
+  File "/zhome/3b/2/223841/miniconda3/envs/clip_ebc/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1511, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/zhome/3b/2/223841/miniconda3/envs/clip_ebc/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1520, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/zhome/3b/2/223841/ADLCV/CLIP-EBC/models/clip/_clip/blocks.py", line 19, in forward
+    return x * torch.sigmoid(1.702 * x)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+torch.cuda.OutOfMemoryError: CUDA out of memory. Tried to allocate 2.14 GiB. GPU 0 has a total capacity of 15.77 GiB of which 1.05 GiB is free. Including non-PyTorch memory, this process has 14.71 GiB memory in use. Of the allocated memory 11.44 GiB is allocated by PyTorch, and 2.90 GiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)

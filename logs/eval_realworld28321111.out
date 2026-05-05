@@ -1,0 +1,168 @@
+
+Loading Teacher @ HR...
+Missing keys: []
+Unexpected keys: ['proj']
+All keys matched successfully.
+Initialized model with text prompts: ['There is no person.', 'There is one person.', 'There are two people.', 'There are three people.', 'There are more than four people.']
+
+Loading Teacher @ LR...
+Missing keys: []
+Unexpected keys: ['proj']
+All keys matched successfully.
+Initialized model with text prompts: ['There is no person.', 'There is one person.', 'There are two people.', 'There are three people.', 'There are more than four people.']
+
+Loading Student 2x @ LR...
+Missing keys: []
+Unexpected keys: ['proj']
+All keys matched successfully.
+Initialized model with text prompts: ['There is no person.', 'There is one person.', 'There are two people.', 'There are three people.', 'There are more than four people.']
+
+Loading Student 4x @ LR...
+Missing keys: []
+Unexpected keys: ['proj']
+All keys matched successfully.
+Initialized model with text prompts: ['There is no person.', 'There is one person.', 'There are two people.', 'There are three people.', 'There are more than four people.']
+Folder   0 (zoom 2.2x): teacher_hr=91  teacher_lr=90  student_2x=123  student_4x=130
+Folder   1 (zoom 2.0x): teacher_hr=127  teacher_lr=104  student_2x=177  student_4x=198
+Folder   2 (zoom 3.0x): teacher_hr=127  teacher_lr=132  student_2x=208  student_4x=232
+Folder   3 (zoom 2.6x): teacher_hr=597  teacher_lr=594  student_2x=772  student_4x=927
+Folder   4 (zoom 2.3x): teacher_hr=853  teacher_lr=732  student_2x=1138  student_4x=1267
+Folder   5 (zoom 2.1x): teacher_hr=190  teacher_lr=216  student_2x=365  student_4x=468
+Folder   6 (zoom 1.9x): teacher_hr=493  teacher_lr=218  student_2x=473  student_4x=707
+Folder   7 (zoom 2.2x): teacher_hr=430  teacher_lr=327  student_2x=581  student_4x=782
+Folder   8 (zoom 2.0x): teacher_hr=106  teacher_lr=89  student_2x=171  student_4x=197
+Folder   9 (zoom 2.5x): teacher_hr=56  teacher_lr=46  student_2x=87  student_4x=90
+Folder  10 (zoom 3.3x): teacher_hr=25  teacher_lr=21  student_2x=54  student_4x=57
+Folder  11 (zoom 4.2x): teacher_hr=183  teacher_lr=77  student_2x=129  student_4x=155
+Folder  12 (zoom 4.2x): teacher_hr=140  teacher_lr=60  student_2x=99  student_4x=127
+Folder  13 (zoom 2.2x): teacher_hr=256  teacher_lr=291  student_2x=501  student_4x=568
+Folder  14 (zoom 3.5x): teacher_hr=54  teacher_lr=48  student_2x=78  student_4x=90
+Folder  15 (zoom 3.4x): teacher_hr=25  teacher_lr=25  student_2x=36  student_4x=51
+Folder  16 (zoom 2.5x): teacher_hr=119  teacher_lr=135  student_2x=217  student_4x=289
+Folder  17 (zoom 3.5x): teacher_hr=31  teacher_lr=13  student_2x=17  student_4x=18
+Folder  18 (zoom 3.5x): teacher_hr=1039  teacher_lr=709  student_2x=1056  student_4x=1109
+Folder  19 (zoom 3.1x): teacher_hr=123  teacher_lr=114  student_2x=142  student_4x=145
+Folder  20 (zoom 4.6x): teacher_hr=83  teacher_lr=44  student_2x=67  student_4x=91
+Folder  21 (zoom 1.8x): teacher_hr=295  teacher_lr=240  student_2x=398  student_4x=478
+Folder  22 (zoom 2.8x): teacher_hr=441  teacher_lr=371  student_2x=757  student_4x=874
+Folder  23 (zoom 4.6x): teacher_hr=119  teacher_lr=28  student_2x=40  student_4x=29
+Folder  24 (zoom 2.8x): teacher_hr=434  teacher_lr=365  student_2x=648  student_4x=724
+Folder  25 (zoom 2.8x): teacher_hr=76  teacher_lr=66  student_2x=84  student_4x=74
+Folder  26 (zoom 3.3x): teacher_hr=490  teacher_lr=168  student_2x=336  student_4x=140
+Folder  27 (zoom 2.8x): teacher_hr=79  teacher_lr=36  student_2x=53  student_4x=85
+Folder  28 (zoom 2.3x): teacher_hr=246  teacher_lr=390  student_2x=737  student_4x=821
+Folder  29 (zoom 2.7x): teacher_hr=989  teacher_lr=953  student_2x=1446  student_4x=1191
+Folder  30 (zoom 2.1x): teacher_hr=1122  teacher_lr=1045  student_2x=1728  student_4x=1519
+Folder  31 (zoom 2.8x): teacher_hr=316  teacher_lr=167  student_2x=338  student_4x=374
+Folder  32 (zoom 3.0x): teacher_hr=388  teacher_lr=205  student_2x=393  student_4x=683
+Folder  33 (zoom 2.9x): teacher_hr=323  teacher_lr=169  student_2x=329  student_4x=509
+Folder  34 (zoom 3.0x): teacher_hr=158  teacher_lr=143  student_2x=285  student_4x=382
+Folder  35 (zoom 2.1x): teacher_hr=38  teacher_lr=27  student_2x=45  student_4x=69
+Folder  36 (zoom 3.7x): teacher_hr=12  teacher_lr=15  student_2x=31  student_4x=37
+Folder  37 (zoom 2.0x): teacher_hr=438  teacher_lr=393  student_2x=818  student_4x=840
+Folder  38 (zoom 2.0x): teacher_hr=673  teacher_lr=525  student_2x=1026  student_4x=945
+Folder  39 (zoom 1.9x): teacher_hr=1010  teacher_lr=863  student_2x=1456  student_4x=1022
+Folder  40 (zoom 2.1x): teacher_hr=46  teacher_lr=42  student_2x=68  student_4x=91
+Folder  41 (zoom 2.3x): teacher_hr=164  teacher_lr=182  student_2x=348  student_4x=409
+Folder  42 (zoom 2.0x): teacher_hr=242  teacher_lr=217  student_2x=424  student_4x=515
+Folder  43 (zoom 4.1x): teacher_hr=61  teacher_lr=55  student_2x=78  student_4x=78
+Folder  44 (zoom 2.3x): teacher_hr=487  teacher_lr=440  student_2x=673  student_4x=781
+Folder  45 (zoom 2.5x): teacher_hr=174  teacher_lr=175  student_2x=272  student_4x=359
+Folder  46 (zoom 3.2x): teacher_hr=487  teacher_lr=375  student_2x=522  student_4x=618
+Folder  47 (zoom 4.9x): teacher_hr=448  teacher_lr=358  student_2x=464  student_4x=456
+Folder  48 (zoom 2.4x): teacher_hr=331  teacher_lr=299  student_2x=422  student_4x=447
+Folder  49 (zoom 2.7x): teacher_hr=225  teacher_lr=178  student_2x=282  student_4x=314
+Folder  50 (zoom 2.5x): teacher_hr=1048  teacher_lr=786  student_2x=1385  student_4x=1029
+Folder  51 (zoom 2.6x): teacher_hr=990  teacher_lr=167  student_2x=400  student_4x=379
+Folder  52 (zoom 1.9x): teacher_hr=798  teacher_lr=650  student_2x=1057  student_4x=833
+Folder  53 (zoom 4.6x): teacher_hr=2787  teacher_lr=327  student_2x=540  student_4x=2710
+Folder  54 (zoom 1.7x): teacher_hr=1423  teacher_lr=1374  student_2x=2427  student_4x=2077
+Folder  55 (zoom 1.7x): teacher_hr=1712  teacher_lr=1703  student_2x=3116  student_4x=2630
+Folder  56 (zoom 2.0x): teacher_hr=420  teacher_lr=333  student_2x=665  student_4x=728
+Folder  57 (zoom 3.6x): teacher_hr=96  teacher_lr=100  student_2x=207  student_4x=85
+Folder  58 (zoom 1.9x): teacher_hr=109  teacher_lr=134  student_2x=187  student_4x=202
+Folder  59 (zoom 1.2x): teacher_hr=191  teacher_lr=170  student_2x=289  student_4x=301
+Folder  60 (zoom 7.5x): teacher_hr=8204  teacher_lr=4443  student_2x=3584  student_4x=1878
+
+Results saved to ./realworld_outputs/results.csv
+
+Generating visualizations...
+Missing keys: []
+Unexpected keys: ['proj']
+All keys matched successfully.
+Initialized model with text prompts: ['There is no person.', 'There is one person.', 'There are two people.', 'There are three people.', 'There are more than four people.']
+Missing keys: []
+Unexpected keys: ['proj']
+All keys matched successfully.
+Initialized model with text prompts: ['There is no person.', 'There is one person.', 'There are two people.', 'There are three people.', 'There are more than four people.']
+Missing keys: []
+Unexpected keys: ['proj']
+All keys matched successfully.
+Initialized model with text prompts: ['There is no person.', 'There is one person.', 'There are two people.', 'There are three people.', 'There are more than four people.']
+  Saved visualization for folder 60
+
+------------------------------------------------------------
+Sender: LSF System <lsfadmin@hpc.dtu.dk>
+Subject: Job 28321111: <Eval_Realworld> in cluster <dcc> Done
+
+Job <Eval_Realworld> was submitted from host <hpclogin1> by user <s253771> in cluster <dcc> at Wed Apr 29 07:37:25 2026
+Job was executed on host(s) <4*n-62-11-13>, in queue <gpuv100>, as user <s253771> in cluster <dcc> at Wed Apr 29 07:45:56 2026
+</zhome/3b/2/223841> was used as the home directory.
+</zhome/3b/2/223841/ADLCV/CLIP-EBC> was used as the working directory.
+Started at Wed Apr 29 07:45:56 2026
+Terminated at Wed Apr 29 07:56:23 2026
+Results reported at Wed Apr 29 07:56:23 2026
+
+Your job looked like:
+
+------------------------------------------------------------
+# LSBATCH: User input
+#!/bin/sh
+#BSUB -q gpuv100
+#BSUB -gpu "num=1"
+#BSUB -J Eval_Realworld
+#BSUB -n 4
+#BSUB -R "span[hosts=1]"
+#BSUB -R "rusage[mem=20GB]"
+#BSUB -W 02:00
+#BSUB -o logs/eval_realworld%J.out
+#BSUB -e logs/eval_realworld%J.err
+
+source ~/miniconda3/bin/activate clip_ebc
+cd "$LSB_SUBCWD"
+mkdir -p logs
+
+python eval_realworld.py \
+    --teacher_weight_path ./checkpoints/nwpu/best_rmse_0.pth \
+    --student_2x_weight_path ./checkpoints/student/best_student_e50_lr1e-5.pth \
+    --student_4x_weight_path ./checkpoints/student/best_student_e50_lr3e-05_ds4.pth \
+    --data_root /dtu/blackhole/02/137570/MultiRes/test \
+    --save_dir ./realworld_outputs \
+    --device cuda \
+    --visualize_folders 60
+
+------------------------------------------------------------
+
+Successfully completed.
+
+Resource usage summary:
+
+    CPU time :                                   620.00 sec.
+    Max Memory :                                 3792 MB
+    Average Memory :                             2372.33 MB
+    Total Requested Memory :                     81920.00 MB
+    Delta Memory :                               78128.00 MB
+    Max Swap :                                   -
+    Max Processes :                              4
+    Max Threads :                                9
+    Run time :                                   627 sec.
+    Turnaround time :                            1138 sec.
+
+The output (if any) is above this job summary.
+
+
+
+PS:
+
+Read file <logs/eval_realworld28321111.err> for stderr output of this job.
+

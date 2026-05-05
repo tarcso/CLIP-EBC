@@ -1,0 +1,84 @@
+Loading teacher...
+Missing keys: []
+Unexpected keys: ['proj']
+All keys matched successfully.
+Initialized model with text prompts: ['There is no person.', 'There is one person.', 'There are two people.', 'There are three people.', 'There are more than four people.']
+Loading student...
+Missing keys: []
+Unexpected keys: ['proj']
+All keys matched successfully.
+Initialized model with text prompts: ['There is no person.', 'There is one person.', 'There are two people.', 'There are three people.', 'There are more than four people.']
+Loading Real-ESRGAN...
+	Tile 1/9
+	Tile 2/9
+	Tile 3/9
+	Tile 4/9
+	Tile 5/9
+	Tile 6/9
+	Tile 7/9
+	Tile 8/9
+	Tile 9/9
+
+------------------------------------------------------------
+Sender: LSF System <lsfadmin@hpc.dtu.dk>
+Subject: Job 28321112: <Eval_SR> in cluster <dcc> Exited
+
+Job <Eval_SR> was submitted from host <hpclogin1> by user <s253771> in cluster <dcc> at Wed Apr 29 07:37:25 2026
+Job was executed on host(s) <4*n-62-11-13>, in queue <gpuv100>, as user <s253771> in cluster <dcc> at Wed Apr 29 07:56:24 2026
+</zhome/3b/2/223841> was used as the home directory.
+</zhome/3b/2/223841/ADLCV/CLIP-EBC> was used as the working directory.
+Started at Wed Apr 29 07:56:24 2026
+Terminated at Wed Apr 29 08:36:51 2026
+Results reported at Wed Apr 29 08:36:51 2026
+
+Your job looked like:
+
+------------------------------------------------------------
+# LSBATCH: User input
+#!/bin/sh
+#BSUB -q gpuv100
+#BSUB -gpu "num=1"
+#BSUB -J Eval_SR
+#BSUB -n 4
+#BSUB -R "span[hosts=1]"
+#BSUB -R "rusage[mem=20GB]"
+#BSUB -W 04:00
+#BSUB -o logs/eval_sr%J.out
+#BSUB -e logs/eval_sr%J.err
+
+source ~/miniconda3/bin/activate clip_ebc
+cd "$LSB_SUBCWD"
+mkdir -p logs
+
+python eval_sr.py \
+    --teacher_weight_path ./checkpoints/nwpu/best_rmse_0.pth \
+    --student_weight_path ./checkpoints/student/best_student_e50_lr1e-5.pth \
+    --esrgan_weight_path ./weights/RealESRGAN_x4plus.pth \
+    --downscale 2 --device cuda \
+    --save_dir ./sr_eval_outputs/ds2
+
+------------------------------------------------------------
+
+Exited with exit code 1.
+
+Resource usage summary:
+
+    CPU time :                                   2394.00 sec.
+    Max Memory :                                 2948 MB
+    Average Memory :                             2729.38 MB
+    Total Requested Memory :                     81920.00 MB
+    Delta Memory :                               78972.00 MB
+    Max Swap :                                   -
+    Max Processes :                              4
+    Max Threads :                                10
+    Run time :                                   2427 sec.
+    Turnaround time :                            3566 sec.
+
+The output (if any) is above this job summary.
+
+
+
+PS:
+
+Read file <logs/eval_sr28321112.err> for stderr output of this job.
+
