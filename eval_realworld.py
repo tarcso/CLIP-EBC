@@ -98,61 +98,62 @@ def save_visualization(folder_id, data_root, teacher, student_ds2, student_ds4, 
     print(f"  Saved visualization for folder {folder_id}")
 
 
+def run_model_on_all(args, weight_path, folders, data_root, use_lr, window_size, stride, device, label):
+    """Load one model, run on all folders, unload. Returns dict {folder_id: pred}."""
+    print(f"\nLoading {label}...")
+    model = build_model(args, weight_path).to(device)
+    results = {}
+    for folder_id in folders:
+        key = "lr" if use_lr else "hr"
+        img_path = os.path.join(data_root, folder_id, f"{folder_id}_{key}.jpg")
+        if not os.path.exists(img_path):
+            continue
+        tensor = load_image(img_path)
+        results[folder_id] = predict(model, tensor, window_size, stride, device)
+    del model
+    torch.cuda.empty_cache()
+    return results
+
+
 def main(args):
     device = torch.device(args.device)
     window_size = args.input_size
     stride = args.input_size
-
-    print("Loading teacher...")
-    teacher = build_model(args, args.teacher_weight_path).to(device)
-
-    print("Loading student 2x...")
-    student_ds2 = build_model(args, args.student_2x_weight_path).to(device)
-
-    student_ds4 = None
-    if args.student_4x_weight_path and os.path.exists(args.student_4x_weight_path):
-        print("Loading student 4x...")
-        student_ds4 = build_model(args, args.student_4x_weight_path).to(device)
-    else:
-        print("Student 4x not available, skipping.")
-
     data_root = args.data_root
+
     folders = sorted([d for d in os.listdir(data_root) if os.path.isdir(os.path.join(data_root, d))], key=int)
+
+    # Run each model separately to stay within GPU memory
+    teacher_hr = run_model_on_all(args, args.teacher_weight_path, folders, data_root, use_lr=False, window_size=window_size, stride=stride, device=device, label="Teacher @ HR")
+    teacher_lr = run_model_on_all(args, args.teacher_weight_path, folders, data_root, use_lr=True,  window_size=window_size, stride=stride, device=device, label="Teacher @ LR")
+    student_2x = run_model_on_all(args, args.student_2x_weight_path, folders, data_root, use_lr=True, window_size=window_size, stride=stride, device=device, label="Student 2x @ LR")
+
+    student_4x = {}
+    if args.student_4x_weight_path and os.path.exists(args.student_4x_weight_path):
+        student_4x = run_model_on_all(args, args.student_4x_weight_path, folders, data_root, use_lr=True, window_size=window_size, stride=stride, device=device, label="Student 4x @ LR")
 
     rows = []
     for folder_id in folders:
-        hr_path = os.path.join(data_root, folder_id, f"{folder_id}_hr.jpg")
-        lr_path = os.path.join(data_root, folder_id, f"{folder_id}_lr.jpg")
-
-        if not os.path.exists(hr_path) or not os.path.exists(lr_path):
+        if folder_id not in teacher_hr:
             continue
-
-        hr_img = Image.open(hr_path)
-        lr_img = Image.open(lr_path)
+        hr_img = Image.open(os.path.join(data_root, folder_id, f"{folder_id}_hr.jpg"))
+        lr_img = Image.open(os.path.join(data_root, folder_id, f"{folder_id}_lr.jpg"))
         zoom = hr_img.size[0] / lr_img.size[0]
 
-        hr_tensor = load_image(hr_path)
-        lr_tensor = load_image(lr_path)
-
-        t_hr  = predict(teacher,    hr_tensor, window_size, stride, device)
-        t_lr  = predict(teacher,    lr_tensor, window_size, stride, device)
-        s2_lr = predict(student_ds2, lr_tensor, window_size, stride, device)
-        s4_lr = predict(student_ds4, lr_tensor, window_size, stride, device) if student_ds4 else None
-
+        s4 = student_4x.get(folder_id)
         row = {
             "folder": folder_id,
             "hr_size": f"{hr_img.size[0]}x{hr_img.size[1]}",
             "lr_size": f"{lr_img.size[0]}x{lr_img.size[1]}",
             "zoom_ratio": round(zoom, 2),
-            "teacher_hr": round(t_hr, 1),
-            "teacher_lr": round(t_lr, 1),
-            "student_2x_lr": round(s2_lr, 1),
-            "student_4x_lr": round(s4_lr, 1) if s4_lr is not None else "N/A",
+            "teacher_hr": round(teacher_hr[folder_id], 1),
+            "teacher_lr": round(teacher_lr[folder_id], 1),
+            "student_2x_lr": round(student_2x[folder_id], 1),
+            "student_4x_lr": round(s4, 1) if s4 is not None else "N/A",
         }
         rows.append(row)
-
-        s4_str = f"  student_4x={s4_lr:.0f}" if s4_lr else ""
-        print(f"Folder {folder_id:>3s} (zoom {zoom:.1f}x): teacher_hr={t_hr:.0f}  teacher_lr={t_lr:.0f}  student_2x={s2_lr:.0f}{s4_str}")
+        s4_str = f"  student_4x={s4:.0f}" if s4 is not None else ""
+        print(f"Folder {folder_id:>3s} (zoom {zoom:.1f}x): teacher_hr={teacher_hr[folder_id]:.0f}  teacher_lr={teacher_lr[folder_id]:.0f}  student_2x={student_2x[folder_id]:.0f}{s4_str}")
 
     os.makedirs(args.save_dir, exist_ok=True)
     fieldnames = ["folder", "hr_size", "lr_size", "zoom_ratio", "teacher_hr", "teacher_lr", "student_2x_lr", "student_4x_lr"]
@@ -162,14 +163,22 @@ def main(args):
         writer.writerows(rows)
     print(f"\nResults saved to {args.save_dir}/results.csv")
 
-    # Visualizations for king's crowning (folder 60) and a few others
-    print("\nGenerating visualizations...")
-    for folder_id in args.visualize_folders:
-        save_visualization(
-            folder_id, data_root, teacher, student_ds2, student_ds4,
-            window_size, stride, device,
-            os.path.join(args.save_dir, "visualizations")
-        )
+    # Visualizations — reload models one at a time for each folder
+    if args.visualize_folders:
+        print("\nGenerating visualizations...")
+        teacher = build_model(args, args.teacher_weight_path).to(device)
+        student_ds2 = build_model(args, args.student_2x_weight_path).to(device)
+        student_ds4 = None
+        if args.student_4x_weight_path and os.path.exists(args.student_4x_weight_path):
+            student_ds4 = build_model(args, args.student_4x_weight_path).to(device)
+        for folder_id in args.visualize_folders:
+            save_visualization(
+                folder_id, data_root, teacher, student_ds2, student_ds4,
+                window_size, stride, device,
+                os.path.join(args.save_dir, "visualizations")
+            )
+        del teacher, student_ds2, student_ds4
+        torch.cuda.empty_cache()
 
 
 if __name__ == "__main__":
