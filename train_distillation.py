@@ -23,12 +23,14 @@ except ImportError:
 current_dir = os.path.abspath(os.path.dirname(__file__))
 
 
-def distillation_loss(student_pred, teacher_label):
+def distillation_loss(student_pred, teacher_label, count_loss_weight=0.1):
     """MSE on density map values + L1 on total count.
 
     MSE preserves absolute scale so the student learns both where the crowd is
     and how many people are there, without the softmax normalisation destroying
     count information.  The count term provides an explicit second-order signal.
+    count_loss_weight controls how strongly the total count is enforced.
+    Higher values reduce overcounting/undercounting bias.
     """
     if isinstance(student_pred, (list, tuple)):
         student_pred = student_pred[0]
@@ -53,7 +55,7 @@ def distillation_loss(student_pred, teacher_label):
         student_pred.sum(dim=(1, 2, 3)),
         teacher_label.sum(dim=(1, 2, 3)),
     )
-    return density_loss + 0.1 * count_loss
+    return density_loss + count_loss_weight * count_loss
 
 
 def train_distilation(
@@ -67,6 +69,7 @@ def train_distilation(
     epochs: int,
     device: torch.device,
     run_tag: str = "",
+    count_loss_weight: float = 0.1,
 ):
     teacher = teacher.to(device)
     teacher.eval()
@@ -97,7 +100,7 @@ def train_distilation(
                 # student is in train() → returns (logits, exp); use exp (index 1) for distillation,
                 # not logits (index 0) which has 5 channels and would mismatch teacher's 1-channel exp
                 pred = student_out[1] if isinstance(student_out, tuple) else student_out
-                loss = loss_fn(pred, pseudo_labels)
+                loss = loss_fn(pred, pseudo_labels, count_loss_weight)
 
             scaler.scale(loss).backward()
             scaler.unscale_(optimizer)
@@ -133,7 +136,7 @@ def train_distilation(
                     student_out = student(student_data)
                     student_exp = student_out[0] if isinstance(student_out, tuple) else student_out
 
-                    loss = loss_fn(student_exp, teacher_exp)
+                    loss = loss_fn(student_exp, teacher_exp, count_loss_weight)
 
                 val_loss += loss.item()
                 pred_count = student_exp.sum(dim=(1, 2, 3))
@@ -273,7 +276,9 @@ if __name__ == "__main__":
     parser.add_argument("--epochs", type=int, default=50)
     parser.add_argument("--lr", type=float, default=1e-5)
     parser.add_argument("--downscale", type=int, default=2, choices=[2, 4])
+    parser.add_argument("--downscale_max", type=float, default=None)
     parser.add_argument("--batch_size", type=int, default=8)
+    parser.add_argument("--count_loss_weight", type=float, default=0.1)
     parser.add_argument("--device", type=str, default="cpu", choices=["cpu", "cuda", "mps"])
 
     args = parser.parse_args()
@@ -286,6 +291,7 @@ if __name__ == "__main__":
         sigma=4.0,
         return_filename=False,
         downscale=args.downscale,
+        downscale_max=args.downscale_max,
     )
     val_data = Crowd_distilation(
         dataset="nwpu",
@@ -293,6 +299,7 @@ if __name__ == "__main__":
         sigma=4.0,
         return_filename=False,
         downscale=args.downscale,
+        # no jitter on val — fixed scale for comparable metrics
     )
 
     train_loader = DataLoader(
@@ -317,9 +324,11 @@ if __name__ == "__main__":
     optimizer = torch.optim.AdamW(student.parameters(), lr=args.lr, weight_decay=1e-4)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs, eta_min=1e-7)
 
-    run_tag = f"_e{args.epochs}_lr{args.lr:.0e}_ds{args.downscale}"
+    ds_tag = f"{args.downscale}-{args.downscale_max}" if args.downscale_max else str(args.downscale)
+    run_tag = f"_e{args.epochs}_lr{args.lr:.0e}_clw{args.count_loss_weight}_ds{ds_tag}"
     train_distilation(
         teacher, student, train_loader, val_loader,
         optimizer, scheduler, distillation_loss, args.epochs, device,
         run_tag=run_tag,
+        count_loss_weight=args.count_loss_weight,
     )
