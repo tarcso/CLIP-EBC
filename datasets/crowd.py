@@ -264,10 +264,19 @@ class Crowd_distilation(Dataset):
         sigma: Optional[float] = None,
         return_filename: bool = False,
         num_crops: int = 1,
-        downscale: int = 2
+        downscale: int = 2,
+        downscale_max: Optional[float] = None,
     ) -> None:
         """
         Dataset for crowd counting.
+
+        downscale: fixed downscale factor (int), or minimum of the jitter range when
+                   downscale_max is also set.
+        downscale_max: when set, downscale factor is sampled uniformly from
+                       [downscale, downscale_max] per item (scale jitter).
+                       Student is always resized to 448//downscale pixels so
+                       batch sizes remain fixed; varying degradation comes from the
+                       intermediate resize step.
         """
         assert dataset.lower() in available_datasets, f"Dataset {dataset} is not available."
         assert split in ["train", "val"], f"Split {split} is not available."
@@ -289,6 +298,9 @@ class Crowd_distilation(Dataset):
         self.return_filename = return_filename
         self.num_crops = num_crops
         self.downscale = downscale
+        self.downscale_max = downscale_max
+        # Fixed output size for the student — keeps batch dimensions consistent
+        self.student_output_size = 448 // downscale
 
     def __find_root__(self) -> None:
         hpc_path = "/dtu/blackhole/02/137570/MultiRes/NWPU_crowd"
@@ -386,8 +398,16 @@ class Crowd_distilation(Dataset):
         # 4. Teacher image: full-resolution crop resized to 448×448
         teacher_img = self.normalize(TF.resize(image, (448, 448)))
 
-        # 5. Student image: same crop downscaled by factor
-        student_size = 448 // self.downscale
-        student_img = self.normalize(TF.resize(image, (student_size, student_size)))
+        # 5. Student image: downscale then resize to fixed output size
+        if self.downscale_max is not None:
+            # Scale jitter: randomly sample downscale factor each time
+            import random
+            factor = random.uniform(self.downscale, self.downscale_max)
+            intermediate = max(32, int(round(448 / factor)))
+            student_img = TF.resize(image, (intermediate, intermediate))
+            student_img = TF.resize(student_img, (self.student_output_size, self.student_output_size))
+        else:
+            student_img = TF.resize(image, (self.student_output_size, self.student_output_size))
+        student_img = self.normalize(student_img)
 
         return teacher_img, student_img, gt_count

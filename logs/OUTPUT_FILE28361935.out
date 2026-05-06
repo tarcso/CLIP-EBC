@@ -1,0 +1,154 @@
+model          :	clip_vit_l_14
+input_size     :	224
+reduction      :	8
+regression     :	False
+truncation     :	4
+anchor_points  :	average
+prompt_type    :	word
+granularity    :	fine
+num_vpt        :	32
+vpt_drop       :	0.0
+shallow_vpt    :	False
+weight_path    :	./checkpoints/nwpu/best_rmse_0.pth
+epochs         :	50
+lr             :	3e-05
+downscale      :	2
+batch_size     :	8
+count_loss_weight:	0.5
+device         :	cuda
+Missing keys: []
+Unexpected keys: ['proj']
+All keys matched successfully.
+Initialized model with text prompts: ['There is no person.', 'There is one person.', 'There are two people.', 'There are three people.', 'There are more than four people.']
+Epoch 1/50: Train Loss 14.1460 | Val Loss 13.2428 | MAE 122.18 | RMSE 471.12 | LR 3.00e-05
+  -> Saved best student (MAE 122.18)
+Epoch 2/50: Train Loss 12.3747 | Val Loss 12.6535 | MAE 121.59 | RMSE 470.61 | LR 2.99e-05
+  -> Saved best student (MAE 121.59)
+Epoch 3/50: Train Loss 11.3278 | Val Loss 12.1460 | MAE 120.81 | RMSE 466.04 | LR 2.97e-05
+  -> Saved best student (MAE 120.81)
+Epoch 4/50: Train Loss 10.4201 | Val Loss 11.8657 | MAE 119.99 | RMSE 458.54 | LR 2.95e-05
+  -> Saved best student (MAE 119.99)
+Epoch 5/50: Train Loss 9.8131 | Val Loss 11.4047 | MAE 122.80 | RMSE 457.71 | LR 2.93e-05
+Epoch 6/50: Train Loss 9.1112 | Val Loss 10.9767 | MAE 119.22 | RMSE 450.07 | LR 2.90e-05
+  -> Saved best student (MAE 119.22)
+Epoch 7/50: Train Loss 8.5113 | Val Loss 10.8724 | MAE 118.92 | RMSE 443.74 | LR 2.86e-05
+  -> Saved best student (MAE 118.92)
+Epoch 8/50: Train Loss 7.9397 | Val Loss 10.9651 | MAE 116.90 | RMSE 438.01 | LR 2.82e-05
+  -> Saved best student (MAE 116.90)
+Epoch 9/50: Train Loss 7.3477 | Val Loss 10.5494 | MAE 118.04 | RMSE 441.39 | LR 2.77e-05
+Epoch 10/50: Train Loss 6.8769 | Val Loss 10.6266 | MAE 117.93 | RMSE 430.96 | LR 2.71e-05
+Epoch 11/50: Train Loss 6.5080 | Val Loss 10.0649 | MAE 116.06 | RMSE 433.89 | LR 2.66e-05
+  -> Saved best student (MAE 116.06)
+Epoch 12/50: Train Loss 6.0105 | Val Loss 10.8128 | MAE 113.86 | RMSE 424.40 | LR 2.59e-05
+  -> Saved best student (MAE 113.86)
+Epoch 13/50: Train Loss 5.7212 | Val Loss 10.6124 | MAE 114.52 | RMSE 424.48 | LR 2.53e-05
+Epoch 14/50: Train Loss 5.4277 | Val Loss 10.6077 | MAE 115.43 | RMSE 423.92 | LR 2.46e-05
+Epoch 15/50: Train Loss 5.1157 | Val Loss 11.3005 | MAE 114.51 | RMSE 417.93 | LR 2.38e-05
+Epoch 16/50: Train Loss 5.0258 | Val Loss 10.5443 | MAE 114.58 | RMSE 426.52 | LR 2.31e-05
+Epoch 17/50: Train Loss 4.7063 | Val Loss 10.8238 | MAE 115.92 | RMSE 425.75 | LR 2.23e-05
+Epoch 18/50: Train Loss 4.5326 | Val Loss 10.5169 | MAE 114.81 | RMSE 422.37 | LR 2.14e-05
+Epoch 19/50: Train Loss 4.3622 | Val Loss 10.8611 | MAE 114.26 | RMSE 423.50 | LR 2.06e-05
+Epoch 20/50: Train Loss 4.1582 | Val Loss 11.0976 | MAE 114.73 | RMSE 423.24 | LR 1.97e-05
+Epoch 21/50: Train Loss 3.9579 | Val Loss 10.6607 | MAE 114.47 | RMSE 422.78 | LR 1.88e-05
+Epoch 22/50: Train Loss 3.9410 | Val Loss 11.0523 | MAE 112.67 | RMSE 423.69 | LR 1.79e-05
+  -> Saved best student (MAE 112.67)
+Epoch 23/50: Train Loss 3.8883 | Val Loss 10.8366 | MAE 114.45 | RMSE 424.96 | LR 1.69e-05
+Epoch 24/50: Train Loss 3.4800 | Val Loss 10.4410 | MAE 114.71 | RMSE 425.00 | LR 1.60e-05
+Epoch 25/50: Train Loss 3.3589 | Val Loss 10.8321 | MAE 114.05 | RMSE 424.69 | LR 1.51e-05
+Epoch 26/50: Train Loss 3.3337 | Val Loss 10.6818 | MAE 116.16 | RMSE 429.58 | LR 1.41e-05
+Epoch 27/50: Train Loss 3.3430 | Val Loss 10.5246 | MAE 116.16 | RMSE 426.85 | LR 1.32e-05
+Epoch 28/50: Train Loss 3.1604 | Val Loss 10.5759 | MAE 117.08 | RMSE 429.34 | LR 1.22e-05
+Epoch 29/50: Train Loss 3.1223 | Val Loss 10.6953 | MAE 114.51 | RMSE 424.28 | LR 1.13e-05
+Epoch 30/50: Train Loss 2.9833 | Val Loss 10.7202 | MAE 114.33 | RMSE 424.58 | LR 1.04e-05
+Epoch 31/50: Train Loss 2.9773 | Val Loss 10.5643 | MAE 115.23 | RMSE 426.20 | LR 9.55e-06
+Epoch 32/50: Train Loss 2.9282 | Val Loss 10.5603 | MAE 115.43 | RMSE 426.82 | LR 8.68e-06
+Epoch 33/50: Train Loss 3.0801 | Val Loss 10.7327 | MAE 114.21 | RMSE 426.43 | LR 7.85e-06
+Epoch 34/50: Train Loss 3.0631 | Val Loss 10.7873 | MAE 114.30 | RMSE 428.38 | LR 7.04e-06
+Epoch 35/50: Train Loss 2.9729 | Val Loss 10.8295 | MAE 113.74 | RMSE 425.72 | LR 6.26e-06
+Epoch 36/50: Train Loss 2.9263 | Val Loss 10.7003 | MAE 114.66 | RMSE 427.85 | LR 5.52e-06
+Epoch 37/50: Train Loss 2.9359 | Val Loss 10.6160 | MAE 115.22 | RMSE 425.31 | LR 4.82e-06
+Epoch 38/50: Train Loss 2.8161 | Val Loss 10.4406 | MAE 116.01 | RMSE 427.47 | LR 4.15e-06
+Epoch 39/50: Train Loss 2.8463 | Val Loss 10.5455 | MAE 115.50 | RMSE 425.80 | LR 3.53e-06
+Epoch 40/50: Train Loss 2.7488 | Val Loss 10.5288 | MAE 116.09 | RMSE 426.35 | LR 2.96e-06
+Epoch 41/50: Train Loss 2.6389 | Val Loss 10.4294 | MAE 115.85 | RMSE 425.93 | LR 2.43e-06
+Epoch 42/50: Train Loss 2.5728 | Val Loss 10.4324 | MAE 115.96 | RMSE 426.50 | LR 1.95e-06
+Epoch 43/50: Train Loss 2.5457 | Val Loss 10.4392 | MAE 116.19 | RMSE 426.24 | LR 1.52e-06
+Epoch 44/50: Train Loss 2.5239 | Val Loss 10.4432 | MAE 116.06 | RMSE 426.50 | LR 1.15e-06
+Epoch 45/50: Train Loss 2.5013 | Val Loss 10.4780 | MAE 115.86 | RMSE 426.44 | LR 8.32e-07
+Epoch 46/50: Train Loss 2.4519 | Val Loss 10.5048 | MAE 115.74 | RMSE 426.86 | LR 5.70e-07
+Epoch 47/50: Train Loss 2.4029 | Val Loss 10.5655 | MAE 115.29 | RMSE 426.35 | LR 3.65e-07
+Epoch 48/50: Train Loss 2.3795 | Val Loss 10.5791 | MAE 115.35 | RMSE 426.71 | LR 2.18e-07
+Epoch 49/50: Train Loss 2.3564 | Val Loss 10.5843 | MAE 115.42 | RMSE 426.66 | LR 1.30e-07
+Epoch 50/50: Train Loss 2.3453 | Val Loss 10.5867 | MAE 115.57 | RMSE 426.81 | LR 1.00e-07
+Metrics plot saved to assets/training_metrics_e50_lr3e-05_clw0.5_ds2.png
+Training history saved to assets/training_history_e50_lr3e-05_clw0.5_ds2.json
+Uploaded best_student_e50_lr3e-05_clw0.5_ds2.pth to HuggingFace
+
+------------------------------------------------------------
+Sender: LSF System <lsfadmin@hpc.dtu.dk>
+Subject: Job 28361935: <Distill_CLIP> in cluster <dcc> Done
+
+Job <Distill_CLIP> was submitted from host <hpclogin1> by user <s253771> in cluster <dcc> at Tue May  5 18:15:46 2026
+Job was executed on host(s) <4*n-62-20-11>, in queue <gpuv100>, as user <s253771> in cluster <dcc> at Tue May  5 18:16:51 2026
+</zhome/3b/2/223841> was used as the home directory.
+</zhome/3b/2/223841/ADLCV/CLIP-EBC> was used as the working directory.
+Started at Tue May  5 18:16:51 2026
+Terminated at Tue May  5 21:09:08 2026
+Results reported at Tue May  5 21:09:08 2026
+
+Your job looked like:
+
+------------------------------------------------------------
+# LSBATCH: User input
+#!/bin/sh
+### ---------------- specify queue name ----------------
+#BSUB -q gpuv100
+#BSUB -gpu "num=1"
+### ---------------- specify job name ----------------
+#BSUB -J Distill_CLIP
+### ---------------- specify number of cores ----------------
+#BSUB -n 4
+#BSUB -R "span[hosts=1]"
+### ---------------- specify CPU memory requirements ----------------
+#BSUB -R "rusage[mem=20GB]"
+### ---------------- specify wall-clock time (max allowed is 12:00) ----------------
+#BSUB -W 12:00
+#BSUB -o logs/OUTPUT_FILE%J.out
+#BSUB -e logs/OUTPUT_FILE%J.err
+
+source ~/miniconda3/bin/activate clip_ebc
+cd "$LSB_SUBCWD"
+mkdir -p logs
+
+python train_distillation.py \
+    --model clip_vit_l_14 --input_size 224 --reduction 8 --truncation 4 \
+    --anchor_points average --prompt_type word --granularity fine \
+    --num_vpt 32 --vpt_drop 0.0 \
+    --weight_path ./checkpoints/nwpu/best_rmse_0.pth \
+    --device cuda --epochs 50 --lr 3e-5 --count_loss_weight 0.5 --downscale 2 --batch_size 8
+
+------------------------------------------------------------
+
+Successfully completed.
+
+Resource usage summary:
+
+    CPU time :                                   31972.00 sec.
+    Max Memory :                                 2878 MB
+    Average Memory :                             2107.39 MB
+    Total Requested Memory :                     81920.00 MB
+    Delta Memory :                               79042.00 MB
+    Max Swap :                                   -
+    Max Processes :                              8
+    Max Threads :                                28
+    Run time :                                   10337 sec.
+    Turnaround time :                            10402 sec.
+
+The output (if any) is above this job summary.
+
+
+
+PS:
+
+Read file <logs/OUTPUT_FILE28361935.err> for stderr output of this job.
+

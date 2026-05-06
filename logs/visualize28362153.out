@@ -1,0 +1,93 @@
+Loading teacher...
+Missing keys: []
+Unexpected keys: ['proj']
+All keys matched successfully.
+Initialized model with text prompts: ['There is no person.', 'There is one person.', 'There are two people.', 'There are three people.', 'There are more than four people.']
+Loading student 2x...
+Missing keys: []
+Unexpected keys: ['proj']
+All keys matched successfully.
+Initialized model with text prompts: ['There is no person.', 'There is one person.', 'There are two people.', 'There are three people.', 'There are more than four people.']
+Loading student 4x...
+Missing keys: []
+Unexpected keys: ['proj']
+All keys matched successfully.
+Initialized model with text prompts: ['There is no person.', 'There is one person.', 'There are two people.', 'There are three people.', 'There are more than four people.']
+
+Processing 125.jpg...
+Saved ./assets/visualizations/125_comparison.png
+
+Processing 047.jpg...
+Saved ./assets/visualizations/047_comparison.png
+
+Processing 299.jpg...
+Saved ./assets/visualizations/299_comparison.png
+
+Processing 244.jpg...
+Saved ./assets/visualizations/244_comparison.png
+
+------------------------------------------------------------
+Sender: LSF System <lsfadmin@hpc.dtu.dk>
+Subject: Job 28362153: <Visualize> in cluster <dcc> Done
+
+Job <Visualize> was submitted from host <hpclogin1> by user <s253771> in cluster <dcc> at Tue May  5 18:39:53 2026
+Job was executed on host(s) <4*n-62-20-16>, in queue <gpuv100>, as user <s253771> in cluster <dcc> at Tue May  5 18:51:34 2026
+</zhome/3b/2/223841> was used as the home directory.
+</zhome/3b/2/223841/ADLCV/CLIP-EBC> was used as the working directory.
+Started at Tue May  5 18:51:34 2026
+Terminated at Tue May  5 18:55:28 2026
+Results reported at Tue May  5 18:55:28 2026
+
+Your job looked like:
+
+------------------------------------------------------------
+# LSBATCH: User input
+#!/bin/sh
+#BSUB -q gpuv100
+#BSUB -gpu "num=1"
+#BSUB -J Visualize
+#BSUB -n 4
+#BSUB -R "span[hosts=1]"
+#BSUB -R "rusage[mem=20GB]"
+#BSUB -W 01:00
+#BSUB -o logs/visualize%J.out
+#BSUB -e logs/visualize%J.err
+
+source ~/miniconda3/bin/activate clip_ebc
+cd "$LSB_SUBCWD"
+mkdir -p logs
+
+python visualize_predictions.py \
+    --teacher_weight_path ./checkpoints/nwpu/best_rmse_0.pth \
+    --student_2x_weight_path ./checkpoints/student/best_student_e50_lr1e-5.pth \
+    --student_4x_weight_path ./checkpoints/student/best_student_e50_lr3e-05_ds4.pth \
+    --val_dir ./data/nwpu/val/images \
+    --save_dir ./assets/visualizations \
+    --device cuda \
+    --images 125.jpg 047.jpg 299.jpg 244.jpg
+
+------------------------------------------------------------
+
+Successfully completed.
+
+Resource usage summary:
+
+    CPU time :                                   88.00 sec.
+    Max Memory :                                 1996 MB
+    Average Memory :                             1511.75 MB
+    Total Requested Memory :                     81920.00 MB
+    Delta Memory :                               79924.00 MB
+    Max Swap :                                   -
+    Max Processes :                              5
+    Max Threads :                                9
+    Run time :                                   234 sec.
+    Turnaround time :                            935 sec.
+
+The output (if any) is above this job summary.
+
+
+
+PS:
+
+Read file <logs/visualize28362153.err> for stderr output of this job.
+
