@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import csv
 import re
+import textwrap
 from pathlib import Path
 from typing import Optional
 
@@ -192,17 +193,17 @@ def write_plot(rows: list[dict[str, object]], path: Path) -> None:
     if not selected:
         return
 
-    labels = [str(row["experiment"]) for row in selected]
+    labels = ["\n".join(textwrap.wrap(str(row["experiment"]), width=18)) for row in selected]
     mae = [float(row["mae"]) for row in selected]
     rmse = [float(row["rmse"]) for row in selected]
 
     x = range(len(selected))
     width = 0.38
 
-    plt.figure(figsize=(13, 6))
+    plt.figure(figsize=(8, 5))
     plt.bar([i - width / 2 for i in x], mae, width=width, label="MAE", color="#377eb8")
     plt.bar([i + width / 2 for i in x], rmse, width=width, label="RMSE", color="#e41a1c")
-    plt.xticks(list(x), labels, rotation=30, ha="right")
+    plt.xticks(list(x), labels, rotation=35, ha="right")
     plt.ylabel("Count error")
     plt.title("NWPU validation error across resolution experiments")
     plt.legend()
